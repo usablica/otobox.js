@@ -14,29 +14,25 @@
 }(this, function () {
 
   /**
-   * Default options
-   */
-  var _options = {
-    /* Display and value keys */
-    displayKey: 'name',
-    valueKey: 'value',
-
-    /* CSS classes prefix */
-    cssClassPrefix: 'otobox-'
-  };
-
-  /**
-   * Binding keys
-   */
-  var _bindingKeys = {
-    activator: '@'
-  };
-
-  /**
    * To init basic settings and variables
    */
   function _init (selector) {
+    /**
+     * Default options
+     */
+    this._options = {
+      /* Display and value keys */
+      displayKey: 'name',
+      valueKey: 'value',
 
+      /* CSS classes prefix */
+      cssClassPrefix: 'otobox-'
+    };
+
+    //an empty list for activators
+    this.activators = [];
+
+    //ok lets find the target object according to the given parameters
     var targetObject = null;
     if (typeof (selector) == 'object') {
       targetObject = selector;
@@ -46,15 +42,18 @@
       if (queryObject != null) {
         targetObject = queryObject;
       } else {
-        _error('Unable to find the target object with the given CSS selector.');
+        _error.call(this,'Unable to find the target object with the given CSS selector.');
       }
     } else {
-      _error('Unable to initiate with the given parameter for init.');
+      _error.call(this, 'Unable to initiate with the given parameter for init.');
     }
 
     if (targetObject != null) {
+      this._targetObject = targetObject;
       //wrap the target object in the otobox container
-      _wrapIn(targetObject);
+      _wrapIn.call(this, targetObject);
+    } else {
+      _error.call(this, 'targetObject is empty.');
     }
   }
 
@@ -62,7 +61,7 @@
    * Get the css class name + prefix
    */
   function _c (className) {
-    return _options.cssClassPrefix + className;
+    return this._options.cssClassPrefix + className;
   }
 
   /**
@@ -70,7 +69,7 @@
    */
   function _wrapIn (targetObject) {
     var wrapperDiv = document.createElement('div');
-    wrapperDiv.className = _c('wrapper');
+    wrapperDiv.className = _c.call(this, 'wrapper');
 
     //append wrapper right before the target object
     targetObject.parentNode.insertBefore(wrapperDiv, targetObject);
@@ -83,12 +82,40 @@
   }
 
   /**
+   * Add an activator to activators list
+   */
+  function _addActivator (activatorObject) {
+    if (activatorObject != null ) {
+      if (typeof (activatorObject.key) != 'undefined' && typeof (activatorObject.source) != 'undefined') {
+        this.activators.push(activatorObject);
+      } else {
+        _error.call(this, 'key and source fields are mandatory for activator object.');
+      }
+    } else {
+      _error.call(this, 'Activator object is empty.');
+    }
+  }
+
+  /**
+   * Is activator key?
+   */
+  function _isActivatorKey (e, targetObject) {
+    if (this.activators.length > 0) {
+      for (var i = 0; i < this.activators.length; i++) {
+
+      }
+    }
+  }
+
+  /**
    * Add binding keys
    */
   function _addBindingKeys (targetObject) {
     targetObject.onkeyup = function (e) {
-      if (e.keyCode) {
-
+      if (_isActivatorKey(e, targetObject)) {
+        console.log('yes');
+      } else {
+        console.log('no');
       }
     };
   }
@@ -100,9 +127,17 @@
     throw new Error('otobox - ' + msg);
   }
 
-  return {
-    init: function (selector) {
-      _init(selector);
+  /* constructor */
+  var otobox = function (selector) {
+    _init.call(this, selector);
+  };
+
+  otobox.prototype = {
+    addActivator: function (activatorObject) {
+      _addActivator.call(this, activatorObject);
+      return this;
     }
   };
+
+  return otobox;
 }));
