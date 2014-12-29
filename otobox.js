@@ -49,6 +49,9 @@
     //current activator
     this._currentActivator = null;
 
+    //wrapper
+    this._wrapper = null;
+
     //ok lets find the target object according to the given parameters
     var targetObject = null;
     if (typeof (selector) == 'object') {
@@ -72,7 +75,7 @@
     } else {
       _error.call(this, 'targetObject is empty.');
     }
-  }
+  };
 
   /**
    * Get the name + prefix
@@ -80,13 +83,13 @@
    */
   function _c (name) {
     return this._options.namingPrefix + name;
-  }
+  };
 
   /**
    * Wrap the target element in otobox container
    */
   function _wrapIn (targetObject) {
-    var wrapperDiv = document.createElement('div');
+    var wrapperDiv = this._wrapper = document.createElement('div');
     wrapperDiv.className = _c.call(this, 'wrapper');
 
     //append wrapper right before the target object
@@ -102,7 +105,7 @@
 
     //bind keys to the target object
     _addBindingKeys.call(this, targetObject);
-  }
+  };
 
   /**
    * Add an activator to activators list
@@ -124,7 +127,7 @@
     } else {
       _error.call(this, 'Activator object is empty.');
     }
-  }
+  };
 
   /**
    * Is the pressed key is an activator key?
@@ -157,14 +160,14 @@
     }
 
     return null;
-  }
+  };
 
   /**
    * To get the source name + prefix
    */
   function _getSourceName (sourceName) {
     return sourceName + 'Source';
-  }
+  };
 
   /**
    * Check the source and call corresponding method to lookup
@@ -199,26 +202,81 @@
     } else {
       _error.call(this, 'Current activator is empty.');
     }
-  }
+  };
+
+  /**
+   * Clear choices list
+   */
+  function _clearChoicesList () {
+    var liList = this._wrapper.querySelectorAll('ul.' + _c.call(this, 'choices') + ' > li');
+
+    if (liList != null && liList.length > 0) {
+      for (var i = 0; i < liList.length; i++) {
+        liList[i].parentNode.removeChild(liList[i]);
+      }
+    }
+  };
 
   /**
    * Fill choices list with the corresponding source
    */
   function _fillChoicesList (source) {
-    source.call(this, this._currentActivator, this._stack, function (result) {
+    var self = this;
+
+    //clear items first
+    _clearChoicesList.call(this);
+
+    source.call(this, this._currentActivator, this._stack, this._options, function (result) {
       if (typeof (result) == 'object' && result instanceof Array) {
-        for (var i = 0; i < result.length; i++) {
-          var resultItem = result[i];
+        var ulWrapper = self._wrapper.querySelector('ul.' + _c.call(self, 'choices'));
 
+        if (result.length > 0) {
+          for (var i = 0; i < result.length; i++) {
+            var resultItem = result[i];
+
+            var li = document.createElement('li');
+            li.innerHTML = resultItem[self._options.displayKey];
+
+            ulWrapper.appendChild(li);
+          }
+        } else {
           var li = document.createElement('li');
-          li.innerHTML = resultItem[this._options.displayKey];
+          li.innerHTML = 'No result';
 
-
+          ulWrapper.appendChild(li);
         }
       } else {
-        _error.call(this, 'Source returned bad data type.');
+        _error.call(self, 'Source returned bad data type.');
       }
     });
+  };
+
+  /**
+   * Set choices list to active or deactive
+   */
+  function _toggleChoiceListState (isActive) {
+    isActive = !!isActive;
+    var wrapper = this._wrapper;
+
+    //remove active class first
+    wrapper.className = wrapper.className.replace(/otobox-active/gi, '').trim();
+
+    if (isActive === true) {
+      wrapper.className += ' otobox-active';
+    }
+  };
+
+  /**
+   * Change otobox mode
+   */
+  function _changeMode (mode) {
+    if (mode == this._modes.normal) {
+      this._stack = '';
+      this._currentMode = this._modes.normal;
+    } else if (mode == this._modes.insert) {
+      this._stack = '';
+      this._currentMode = this._modes.insert;
+    }
   }
 
   /**
@@ -232,7 +290,7 @@
       var activatorObject = _isActivatorKey.call(self, e, targetObject);
       if (self._currentMode == self._modes.normal && activatorObject != null) {
         //set correct mode and current activator
-        self._currentMode = self._modes.insert;
+        _changeMode.call(self, self._modes.insert);
         self._currentActivator = activatorObject;
       } else {
         if (self._currentMode == self._modes.insert) {
@@ -241,26 +299,76 @@
           var sourceFunction = _routeToSource.call(self);
 
           _fillChoicesList.call(self, sourceFunction);
+
+          //show choices list
+          _toggleChoiceListState.call(self, true);
         } else {
           console.log('no');
         }
       }
     };
-  }
+
+    //I don't know whether can we handle backspace or delete keys with onkeypress event or not
+    //So I'm going to use onkeydown to handle delete and backspace
+    targetObject.onkeydown = function (e) {
+      if (e.keyCode == 37 || e.keyCode == 39) {
+        //left or right
+        _changeMode.call(self, self._modes.normal);
+        _toggleChoiceListState.call(self, false);
+      }
+
+      if (e.keyCode == 27) {
+        //escape
+        _changeMode.call(self, self._modes.normal);
+        _toggleChoiceListState.call(self, false);
+      }
+
+      if (e.keyCode == 8) {
+        //backspace
+        self._stack = self._stack.substr(0, self._stack.length - 1);
+
+        if (self._currentMode == self._modes.insert) {
+          var sourceFunction = _routeToSource.call(self);
+
+          _fillChoicesList.call(self, sourceFunction);
+
+          //show choices list
+          _toggleChoiceListState.call(self, true);
+        }
+      }
+    };
+  };
 
   /**
    * To display an error
    */
   function _error (msg) {
     throw new Error('otobox - ' + msg);
-  }
+  };
 
   /**
    * Default sources of otobox
    */
-  function _arraySource (activator, stack, fn) {
-    fn.call(this, activator.source);
-  }
+  function _arraySource (activator, stack, options, fn) {
+    var result = [];
+
+    console.log(stack);
+
+    for (var i = 0; i < activator.source.length; i++) {
+      var item = activator.source[i];
+
+      if (new RegExp(stack, 'gi').test(item)) {
+        var itemObject = {};
+
+        itemObject[options.displayKey] = item;
+        itemObject[options.valueKey]   = item;
+
+        result.push(itemObject);
+      }
+    }
+
+    fn.call(this, result);
+  };
 
   /* constructor */
   var otobox = function (selector) {

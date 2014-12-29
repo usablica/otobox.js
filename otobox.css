@@ -1,0 +1,6 @@
+ul.otobox-choices {
+    display: none;
+}
+.otobox-wrapper.otobox-active ul.otobox-choices {
+    display: block;
+}
