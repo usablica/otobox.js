@@ -35,6 +35,9 @@
     //an stack to keep pressed keys
     this._stack = '';
 
+    //to hold the key that called the activator
+    this._stackActivator = '';
+
     //modes
     // 0 == normal
     // 1 == insert
@@ -89,14 +92,31 @@
    * Wrap the target element in otobox container
    */
   function _wrapIn (targetObject) {
+    var targetObjectSize = targetObject.getBoundingClientRect();
+
     var wrapperDiv = this._wrapper = document.createElement('div');
     wrapperDiv.className = _c.call(this, 'wrapper');
 
     //append wrapper right before the target object
     targetObject.parentNode.insertBefore(wrapperDiv, targetObject);
 
+    targetObject.className += _c.call(this, 'input');
     //add the target object
     wrapperDiv.appendChild(targetObject);
+
+    //div for editing
+    var editableDiv = document.createElement('div');
+    editableDiv.setAttribute('contenteditable', true);
+    editableDiv.setAttribute('data-placeholder', targetObject.placeholder);
+    editableDiv.className = _c.call(this, 'editableDiv');
+    editableDiv.style.width = targetObjectSize.width + 'px';
+
+    //if it's textarea
+    if (targetObject.nodeName.toLowerCase() == 'textarea') {
+      editableDiv.style.height = targetObjectSize.height + 'px';
+    }
+
+    wrapperDiv.appendChild(editableDiv);
 
     //ul for choices list
     var ulWrapper = document.createElement('ul');
@@ -218,6 +238,52 @@
   };
 
   /**
+   * Remove hint from targetobject
+   */
+  function _clearHint () {
+    var targetObject = this._targetObject;
+    var editableDiv = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv'));
+    var hintElement = editableDiv.querySelector('.' + _c.call(this, 'hint'));
+
+    if (hintElement != null) {
+      hintElement.parentNode.removeChild(hintElement);
+    }
+
+    _setTargetObjectValue.call(this, editableDiv.innerText);
+  }
+
+  /**
+   * Set the choice
+   */
+  function _setChoice (item) {
+    var editableDiv = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv'));
+    var selectedRange = document.getSelection();
+
+    if (selectedRange.focusNode == editableDiv) {
+      var choiceLink = document.createElement('a');
+      choiceLink.className = _c.call(this, 'choiceItem');
+      choiceLink.innerText = this._stackActivator + item[this._options.displayKey];
+      choiceLink.setAttribute('data-value', item[this._options.valueKey]);
+
+      var textNode = document.createTextNode('\u00A0');
+
+      selectedRange.getRangeAt(0).insertNode(textNode);
+      selectedRange.getRangeAt(0).insertNode(choiceLink);
+
+      //TODO: compatible it with older version of IE
+      var createdRange = document.createRange();
+      createdRange.setStart(textNode, 1);
+      createdRange.collapse(true);
+
+      selectedRange.removeAllRanges();
+      selectedRange.addRange(createdRange);
+    }
+
+    _changeMode.call(this, this._modes.normal);
+    _toggleChoiceListState.call(this, false);
+  }
+
+  /**
    * Fill choices list with the corresponding source
    */
   function _fillChoicesList (source) {
@@ -235,7 +301,22 @@
             var resultItem = result[i];
 
             var li = document.createElement('li');
-            li.innerHTML = resultItem[self._options.displayKey];
+
+            var anchor = document.createElement('a');
+            anchor.href = 'javascript:void(0);';
+            anchor.setAttribute('data-value', resultItem[self._options.valueKey]);
+            anchor.innerText = resultItem[self._options.displayKey];
+
+            (function (resultItem) {
+              anchor.onclick = function () {
+                //clear the hint first
+                _clearHint.call(self);
+
+                _setChoice.call(self, resultItem);
+              };
+            }(resultItem));
+
+            li.appendChild(anchor);
 
             ulWrapper.appendChild(li);
           }
@@ -272,10 +353,61 @@
   function _changeMode (mode) {
     if (mode == this._modes.normal) {
       this._stack = '';
+      this._stackActivator = '';
       this._currentMode = this._modes.normal;
+
+      //also remove the hint box and convert it to text
+      _convertHintToText.call(this);
     } else if (mode == this._modes.insert) {
       this._stack = '';
+      this._stackActivator = '';
       this._currentMode = this._modes.insert;
+    }
+  }
+
+  /**
+   * Remove hint element and change it to a text element
+   */
+  function _convertHintToText () {
+    var editableDiv = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv'));
+    var hintElement = editableDiv.querySelector('.' + _c.call(this, 'hint'));
+
+    if (hintElement != null) {
+      var textElement = document.createTextNode(hintElement.innerText);
+
+      //add the text element and remove the hint element
+      hintElement.parentNode.insertBefore(textElement, hintElement);
+      hintElement.parentNode.removeChild(hintElement);
+    }
+  }
+
+  /**
+   * Set value to target object
+   */
+  function _setTargetObjectValue (value) {
+    var targetObject = this._targetObject;
+
+    if (typeof (targetObject.value) != 'undefined') {
+      //input
+      targetObject.value = value;
+    } else {
+      //textarea
+      targetObject.innerText = value;
+    }
+  }
+
+  /**
+   * Get current value of targetObject
+   */
+  function _getTargetObjectValue () {
+    var targetObject = this._targetObject;
+
+    if (typeof (targetObject.value) != 'undefined') {
+      //input
+      return targetObject.value;
+    } else {
+      //textarea
+      return targetObject.innerText;
     }
   }
 
@@ -285,32 +417,65 @@
   function _addBindingKeys (targetObject) {
     var self = this;
 
-    targetObject.onkeypress = function (e) {
+    var editableDiv = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv'));
 
+    editableDiv.onkeypress = function (e) {
       var activatorObject = _isActivatorKey.call(self, e, targetObject);
+
       if (self._currentMode == self._modes.normal && activatorObject != null) {
         //set correct mode and current activator
         _changeMode.call(self, self._modes.insert);
         self._currentActivator = activatorObject;
+        self._stackActivator = String.fromCharCode(e.which);
+
+        var hintElement = document.createElement('span');
+        hintElement.className = _c.call(self, 'hint');
+        hintElement.innerText = String.fromCharCode(e.which);
+
+        var selectedRange = document.getSelection();
+        selectedRange.getRangeAt(0).insertNode(hintElement);
+
+        //TODO: compatible it with older version of IE
+        var createdRange = document.createRange();
+        createdRange.setStart(hintElement, 1);
+
+        selectedRange.removeAllRanges();
+        selectedRange.addRange(createdRange);
+
+        e.preventDefault()
       } else {
         if (self._currentMode == self._modes.insert) {
-          self._stack += String.fromCharCode(e.which);
+          var activator = self._currentActivator;
+          var allowedChars = activator.allowedChars || /./;
 
-          var sourceFunction = _routeToSource.call(self);
+          if (allowedChars.test(String.fromCharCode(e.which))) {
+            self._stack += String.fromCharCode(e.which);
 
-          _fillChoicesList.call(self, sourceFunction);
+            var sourceFunction = _routeToSource.call(self);
 
-          //show choices list
-          _toggleChoiceListState.call(self, true);
+            _fillChoicesList.call(self, sourceFunction);
+
+            //show choices list
+            _toggleChoiceListState.call(self, true);
+          } else {
+            _changeMode.call(self, self._modes.normal);
+            _toggleChoiceListState.call(self, false);
+          }
+
         } else {
           console.log('no');
         }
       }
     };
 
+    editableDiv.onkeyup = function (e) {
+      //set value to target element
+      _setTargetObjectValue.call(self, editableDiv.innerText);
+    };
+
     //I don't know whether can we handle backspace or delete keys with onkeypress event or not
     //So I'm going to use onkeydown to handle delete and backspace
-    targetObject.onkeydown = function (e) {
+    editableDiv.onkeydown = function (e) {
       if (e.keyCode == 37 || e.keyCode == 39) {
         //left or right
         _changeMode.call(self, self._modes.normal);
@@ -351,8 +516,6 @@
    */
   function _arraySource (activator, stack, options, fn) {
     var result = [];
-
-    console.log(stack);
 
     for (var i = 0; i < activator.source.length; i++) {
       var item = activator.source[i];

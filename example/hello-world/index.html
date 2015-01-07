@@ -7,5 +7,14 @@
 
     <body>
       <input type="text" name="otobox" id="otobox" placeholder='Start typing...'>
+
+      <script>
+        var s1 = new otobox('#otobox');
+        s1.addActivator({
+            key: '@',
+            allowedChars: /[a-zA-Z0-9]/,
+            source: ['afshin', 'ali', 'ahmad']
+        });
+      </script>
     </body>
 </html>
