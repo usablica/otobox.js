@@ -273,7 +273,8 @@
     var editableDiv = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv'));
     var selectedRange = document.getSelection();
 
-    if (selectedRange.focusNode == editableDiv) {
+    console.log(selectedRange.focusNode);
+    if (selectedRange.focusNode == editableDiv || selectedRange.focusNode.nodeType == 3) {
       var choiceLink = document.createElement('a');
       choiceLink.className = _c.call(this, 'choiceItem');
       choiceLink.innerText = this._stackActivator + item[this._options.displayKey];
@@ -392,7 +393,17 @@
       //add the text element and remove the hint element
       hintElement.parentNode.insertBefore(textElement, hintElement);
       hintElement.parentNode.removeChild(hintElement);
+
+      var selectedRange = document.getSelection();
+
+      //TODO: compatible it with older versions of IE
+      var createdRange = document.createRange();
+      createdRange.setStart(textElement, hintElement.innerText.length);
+
+      selectedRange.removeAllRanges();
+      selectedRange.addRange(createdRange);
     }
+
   }
 
   /**
@@ -441,7 +452,6 @@
     }
 
     var before = '';
-    console.log('offset', selectedRange.startOffset);
     for (var i = selectedRange.startOffset - 1; i >= 0; i--) {
       var currentValue = inputValue[i];
 
@@ -529,6 +539,34 @@
     var editableDiv = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv'));
 
     editableDiv.onkeypress = function (e) {
+
+      //we should perform this checking in onkeyup event since we need backspace, delete and other keys
+      if (self._currentMode == self._modes.normal) {
+        console.log('1');
+        //check and see if user is typing in a hint area that is not considered as a hint element already
+        var activatorParts = _isHintArea.call(self);
+
+        if (activatorParts != null) {
+          console.log('2');
+          _changeMode.call(self, self._modes.insert);
+          self._currentActivator = activatorParts.activator;
+          self._stackActivator = activatorParts.activatorKey;
+          self._stack = activatorParts.hintText;
+
+          //place the hint element first
+          var hintElement = _placeHintElement.call(self, self._stackActivator + self._stack);
+
+          console.log('3');
+          //and them eliminate the text
+          var prevElement = hintElement.previousSibling;
+
+          if (prevElement.nodeType == 3) {
+           prevElement.textContent = '';
+          }
+        }
+      }
+
+
       var activatorObject = _isActivatorKey.call(self, String.fromCharCode(e.which), targetObject);
 
       if (self._currentMode == self._modes.normal && activatorObject != null) {
@@ -565,28 +603,6 @@
     };
 
     editableDiv.onkeyup = function (e) {
-      if (self._currentMode == self._modes.normal) {
-        //check and see if user is typing in a hint area that is not considered as a hint element already
-        var activatorParts = _isHintArea.call(self);
-
-        if (activatorParts != null) {
-          _changeMode.call(self, self._modes.insert);
-          self._currentActivator = activatorParts.activator;
-          self._stackActivator = activatorParts.activatorKey;
-          self._stack = activatorParts.hintText;
-
-          //place the hint element first
-          var hintElement = _placeHintElement.call(self, self._stackActivator + self._stack);
-
-          //and them eliminate the text
-          var prevElement = hintElement.previousSibling;
-
-          if (prevElement.nodeType == 3) {
-            prevElement.textContent = '';
-          }
-        }
-      }
-
       //set value to target element
       _setTargetObjectValue.call(self, editableDiv.innerText);
     };
