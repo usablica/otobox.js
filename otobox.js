@@ -24,7 +24,6 @@
       /* Display and value keys */
       displayKey: 'name',
       valueKey: 'value',
-
       /* CSS classes and IDs prefix */
       namingPrefix: 'otobox-'
     };
@@ -150,29 +149,44 @@
   };
 
   /**
+   * Normalize activator's activator key regex
+   */
+  function _normalizeActivatorKeyRegExp (activator) {
+    var regex = null;
+    if (typeof (activator.key) == 'string') {
+      //converting string to RegExp
+      try {
+        regex = new RegExp(activator.key);
+      } catch (exp) {
+        _error.call(this, exp.message);
+      }
+    } else if (typeof (activator.key) == 'object' && activator.key instanceof RegExp) {
+      regex = activator.key;
+    } else {
+      error.call(this, 'Unable to match the entered character against activator key.')
+    }
+
+    return regex;
+  }
+
+  /**
+   * Normalize activator's allowed character allowed chars
+   */
+  function _normalizeActivatorAllowedCharsRegExp (activator) {
+    return activator.allowedChars || /.+/;
+  }
+
+  /**
    * Is the pressed key is an activator key?
    */
-  function _isActivatorKey (e, targetObject) {
+  function _isActivatorKey (str, targetObject) {
     if (this._activators.length > 0) {
       for (var i = 0; i < this._activators.length; i++) {
         var activator = this._activators[i];
-
-        var regex = null;
-        if (typeof (activator.key) == 'string') {
-          //converting string to RegExp
-          try {
-            regex = new RegExp(activator.key);
-          } catch (exp) {
-            _error.call(this, exp.message);
-          }
-        } else if (typeof (activator.key) == 'object' && activator.key instanceof RegExp) {
-          regex = activator.key;
-        } else {
-          error.call(this, 'Unable to match the entered character against activator key.')
-        }
+        var regex = _normalizeActivatorKeyRegExp.call(this, activator);
 
         //lets compare using lovely regex :)
-        if (regex.test(String.fromCharCode(e.which))) {
+        if (regex.test(str)) {
           return activator;
           break;
         }
@@ -412,6 +426,101 @@
   }
 
   /**
+   * Check to see if the user is typing in a hint area
+   * e.g.: Hello world @afshin...
+   */
+  function _isHintArea () {
+    var editableDiv = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv'));
+    //TODO: compatible it with older versions of IE
+    var selectedRange = document.getSelection().getRangeAt(0);
+
+    if (selectedRange.startContainer.nodeType == 3) {
+      var inputValue = selectedRange.startContainer.textContent;
+    } else {
+      var inputValue = editableDiv.innerText;
+    }
+
+    var before = '';
+    console.log('offset', selectedRange.startOffset);
+    for (var i = selectedRange.startOffset - 1; i >= 0; i--) {
+      var currentValue = inputValue[i];
+
+      //whitespace is a breaking word
+      if (/\s/.test(currentValue)) {
+        break;
+      }
+
+      before = currentValue + before;
+    }
+
+    var after = '';
+    for (var i = selectedRange.startOffset; i < inputValue.length; i++) {
+      var currentValue = inputValue[i];
+
+      //whitespace is a breaking word
+      if (/\s/.test(currentValue)) {
+        break;
+      }
+
+      after += currentValue;
+    }
+
+    return _isActivatorText.call(this, before + after);
+  }
+
+  /**
+   * Check if the given text can match against one of activators
+   */
+  function _isActivatorText (text) {
+    var activatorKey = text[0];
+    var hint = text.substr(1, text.length - 1);
+
+    if (this._activators.length > 0) {
+      for (var i = 0; i < this._activators.length; i++) {
+        var activator = this._activators[i];
+        var regex = _normalizeActivatorKeyRegExp.call(this, activator);
+
+        //first match the activatorkey
+        if (regex.test(activatorKey)) {
+          var allowedCharsRegExp = _normalizeActivatorAllowedCharsRegExp.call(this, activator);
+
+          //then check if all
+          if (allowedCharsRegExp.test(hint)) {
+            return {
+              activator: activator,
+              activatorKey: activatorKey,
+              hintText: hint
+            };
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Place hint element at the current range
+   */
+  function _placeHintElement (text) {
+    var hintElement = document.createElement('span');
+    hintElement.className = _c.call(this, 'hint');
+    hintElement.innerText = text;
+
+    var selectedRange = document.getSelection();
+    selectedRange.getRangeAt(0).insertNode(hintElement);
+
+    //TODO: compatible it with older versions of IE
+    var createdRange = document.createRange();
+    createdRange.setStart(hintElement, 1);
+
+    selectedRange.removeAllRanges();
+    selectedRange.addRange(createdRange);
+
+    return hintElement;
+  }
+
+  /**
    * Add binding keys
    */
   function _addBindingKeys (targetObject) {
@@ -420,7 +529,7 @@
     var editableDiv = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv'));
 
     editableDiv.onkeypress = function (e) {
-      var activatorObject = _isActivatorKey.call(self, e, targetObject);
+      var activatorObject = _isActivatorKey.call(self, String.fromCharCode(e.which), targetObject);
 
       if (self._currentMode == self._modes.normal && activatorObject != null) {
         //set correct mode and current activator
@@ -428,26 +537,16 @@
         self._currentActivator = activatorObject;
         self._stackActivator = String.fromCharCode(e.which);
 
-        var hintElement = document.createElement('span');
-        hintElement.className = _c.call(self, 'hint');
-        hintElement.innerText = String.fromCharCode(e.which);
-
-        var selectedRange = document.getSelection();
-        selectedRange.getRangeAt(0).insertNode(hintElement);
-
-        //TODO: compatible it with older version of IE
-        var createdRange = document.createRange();
-        createdRange.setStart(hintElement, 1);
-
-        selectedRange.removeAllRanges();
-        selectedRange.addRange(createdRange);
+        //append hint element
+        _placeHintElement.call(self, String.fromCharCode(e.which));
 
         e.preventDefault()
       } else {
         if (self._currentMode == self._modes.insert) {
           var activator = self._currentActivator;
-          var allowedChars = activator.allowedChars || /./;
+          var allowedChars = _normalizeActivatorAllowedCharsRegExp.call(self, activator);
 
+          //check if the entered character is valid or not
           if (allowedChars.test(String.fromCharCode(e.which))) {
             self._stack += String.fromCharCode(e.which);
 
@@ -461,14 +560,33 @@
             _changeMode.call(self, self._modes.normal);
             _toggleChoiceListState.call(self, false);
           }
-
-        } else {
-          console.log('no');
         }
       }
     };
 
     editableDiv.onkeyup = function (e) {
+      if (self._currentMode == self._modes.normal) {
+        //check and see if user is typing in a hint area that is not considered as a hint element already
+        var activatorParts = _isHintArea.call(self);
+
+        if (activatorParts != null) {
+          _changeMode.call(self, self._modes.insert);
+          self._currentActivator = activatorParts.activator;
+          self._stackActivator = activatorParts.activatorKey;
+          self._stack = activatorParts.hintText;
+
+          //place the hint element first
+          var hintElement = _placeHintElement.call(self, self._stackActivator + self._stack);
+
+          //and them eliminate the text
+          var prevElement = hintElement.previousSibling;
+
+          if (prevElement.nodeType == 3) {
+            prevElement.textContent = '';
+          }
+        }
+      }
+
       //set value to target element
       _setTargetObjectValue.call(self, editableDiv.innerText);
     };
@@ -478,6 +596,12 @@
     editableDiv.onkeydown = function (e) {
       if (e.keyCode == 37 || e.keyCode == 39) {
         //left or right
+        _changeMode.call(self, self._modes.normal);
+        _toggleChoiceListState.call(self, false);
+      }
+
+      if (e.keyCode == '32') {
+        //whitespace
         _changeMode.call(self, self._modes.normal);
         _toggleChoiceListState.call(self, false);
       }
