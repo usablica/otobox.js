@@ -586,6 +586,7 @@
   function _handleActivatorKey (e) {
     var targetObject = this._targetObject;
     var activatorObject = _isActivatorKey.call(this, String.fromCharCode(e.which), targetObject);
+    var focusNode = document.getSelection().focusNode;
 
     if (this._currentMode == this._modes.normal && activatorObject != null) {
       //set correct mode and current activator
@@ -598,7 +599,7 @@
 
       e.preventDefault()
     } else {
-      if (this._currentMode == this._modes.insert) {
+      if (this._currentMode == this._modes.insert && /hint/.test(focusNode.parentNode.className)) {
         var activator = this._currentActivator;
 
         //check if the entered character is valid or not
@@ -620,6 +621,41 @@
   };
 
   /**
+   * Check and see if user has changed one of choices
+   */
+  function _handleChoiceChange (e) {
+    var focusNode = document.getSelection().focusNode;
+    var activator = this._currentActivator;
+
+    if (this._currentMode == this._modes.normal && /choiceItem/.test(focusNode.parentNode.className)) {
+      var choiceElement = focusNode.parentNode;
+
+      //it seems user is changing the choice content
+      if (activator.customChoice) {
+        //its okay if user change the content of the choice
+        //we will alter attributes for the choice as well
+ //       choiceElement.setAttribute('data-value', choiceElement.innerText);
+      } else {
+        //in this part we should remove the choice element and convert it to text
+
+        var textElement = document.createTextNode(choiceElement.innerText);
+
+        //add the text element and remove the hint element
+        choiceElement.parentNode.insertBefore(textElement, choiceElement);
+        choiceElement.parentNode.removeChild(choiceElement);
+
+        var selectedRange = document.getSelection();
+        var createdRange = document.createRange();
+        createdRange.setStart(textElement, selectedRange.getRangeAt(0).startOffset);
+        createdRange.collapse(true);
+
+        selectedRange.removeAllRanges();
+        selectedRange.addRange(createdRange);
+      }
+    }
+  };
+
+  /**
    * Add binding keys
    */
   function _addBindingKeys (targetObject) {
@@ -630,6 +666,7 @@
     editableDiv.onkeypress = function (e) {
       _handleHintArea.call(self, e);
       _handleActivatorKey.call(self, e);
+      _handleChoiceChange.call(self, e);
     };
 
     editableDiv.onkeyup = function (e) {
