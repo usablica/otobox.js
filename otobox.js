@@ -132,13 +132,30 @@
    * An example of activator object:
    *
    * {
-   *   key: '*',
-   *   source: 'http://example.com/boo.json'
+   *   key: /./,
+   *   source: 'http://example.com/boo.json',
+   *   allowedChars: /[a-zA-Z]+/,
+   *   displayKey: 'name',
+   *   valueKey: 'value',
+   *   mode: 'select'
    * }
    */
   function _addActivator (activatorObject) {
     if (activatorObject != null ) {
       if (typeof (activatorObject.key) != 'undefined' && typeof (activatorObject.source) != 'undefined') {
+        //check allowed chars regex
+        activatorObject.allowedChars = _normalizeActivatorAllowedCharsRegExp.call(this, activatorObject);
+
+        //normalize activator key regex
+        activatorObject.key = _normalizeActivatorKeyRegExp.call(this, activatorObject);
+
+        //can user enter a custom choice?
+        activatorObject.customChoice = !!activatorObject.customChoice;
+
+        //check and set correct display and value keys
+        activatorObject.displayKey = activatorObject.displayKey || this._options.displayKey;
+        activatorObject.valueKey   = activatorObject.valueKey   || this._options.valueKey;
+
         this._activators.push(activatorObject);
       } else {
         _error.call(this, 'key and source fields are mandatory for activator object.');
@@ -273,7 +290,6 @@
     var editableDiv = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv'));
     var selectedRange = document.getSelection();
 
-    console.log(selectedRange.focusNode);
     if (selectedRange.focusNode == editableDiv || selectedRange.focusNode.nodeType == 3) {
       var choiceLink = document.createElement('a');
       choiceLink.className = _c.call(this, 'choiceItem');
@@ -445,6 +461,10 @@
     //TODO: compatible it with older versions of IE
     var selectedRange = document.getSelection().getRangeAt(0);
 
+    //hint elements should be inside the editable div
+    if (selectedRange.startContainer.parentNode != editableDiv)
+      return;
+
     if (selectedRange.startContainer.nodeType == 3) {
       var inputValue = selectedRange.startContainer.textContent;
     } else {
@@ -542,12 +562,10 @@
 
       //we should perform this checking in onkeyup event since we need backspace, delete and other keys
       if (self._currentMode == self._modes.normal) {
-        console.log('1');
         //check and see if user is typing in a hint area that is not considered as a hint element already
         var activatorParts = _isHintArea.call(self);
 
         if (activatorParts != null) {
-          console.log('2');
           _changeMode.call(self, self._modes.insert);
           self._currentActivator = activatorParts.activator;
           self._stackActivator = activatorParts.activatorKey;
@@ -556,7 +574,6 @@
           //place the hint element first
           var hintElement = _placeHintElement.call(self, self._stackActivator + self._stack);
 
-          console.log('3');
           //and them eliminate the text
           var prevElement = hintElement.previousSibling;
 
