@@ -285,6 +285,28 @@
   };
 
   /**
+   * Generate choice element
+   */
+  function _generateChoiceElement (activatorKey, value, display, activator) {
+    var choiceLink = document.createElement('a');
+    choiceLink.className = _c.call(this, 'choiceItem');
+    _setChoiceElementAttrs.call(this, choiceLink, activatorKey, value, display, activator);
+
+    return choiceLink;
+  };
+
+  /**
+   * Append and set attributes to the choice element
+   */
+  function _setChoiceElementAttrs (choiceLink, activatorKey, value, display, activator) {
+    choiceLink.innerText = activatorKey + display;
+    choiceLink.setAttribute('data-value', value);
+    choiceLink.setAttribute('data-display', display);
+    choiceLink.setAttribute('data-key', activatorKey);
+    choiceLink.setAttribute('data-activator', activator.name);
+  };
+
+  /**
    * Set the choice
    */
   function _setChoice (item) {
@@ -293,9 +315,7 @@
     var activator = this._currentActivator;
 
     if (selectedRange.focusNode == editableDiv || selectedRange.focusNode.nodeType == 3) {
-      var choiceLink = document.createElement('a');
-      choiceLink.className = _c.call(this, 'choiceItem');
-      _setChoiceElementAttrs.call(this, choiceLink, this._stackActivator, item[activator.valueKey], item[activator.displayKey], activator);
+      var choiceLink = _generateChoiceElement.call(this, this._stackActivator, item[activator.valueKey], item[activator.displayKey], activator);
 
       var textNode = document.createTextNode('\u00A0');
 
@@ -314,17 +334,6 @@
     _changeMode.call(this, this._modes.normal);
     _toggleChoiceListState.call(this, false);
   };
-
-  /**
-   * Append and set attributes to the choice element
-   */
-  function _setChoiceElementAttrs (choiceLink, activatorKey, value, display, activator) {
-    choiceLink.innerText = activatorKey + display;
-    choiceLink.setAttribute('data-value', value);
-    choiceLink.setAttribute('data-display', display);
-    choiceLink.setAttribute('data-key', activatorKey);
-    choiceLink.setAttribute('data-activator', activator.name);
-  }
 
   /**
    * Fill choices list with the corresponding source
@@ -639,21 +648,35 @@
     if (this._currentMode == this._modes.normal && /choiceItem/.test(focusNode.parentNode.className)) {
       var choiceElement = focusNode.parentNode;
 
-      //we are at the end of the choice element
-      if (/\s/.test(String.fromCharCode(e.which)) && choiceElement.innerText.length == document.getSelection().getRangeAt(0).startOffset) {
-        var selectedRange = document.getSelection();
+      //since we consider whitespace as a global separator character, we handle it
+      //more carefully when it comes into choice elements
+      if (/\s/.test(String.fromCharCode(e.which))) {
+        var selection = document.getSelection();
+        var selectionRange = selection.getRangeAt(0);
 
-        var textNode = document.createTextNode('\u00A0');
+        var textNodeContent = '';
+        //we are at the end of the choice element
+        if (choiceElement.innerText.length == selectionRange.startOffset) {
+          var textNodeContent = '\u00A0';
+        } else {
+          //other parts of the choice element
+          var beforeStr = choiceElement.innerText.substr(0, selectionRange.startOffset);
+          var afterStr = choiceElement.innerText.substr(selectionRange.startOffset, choiceElement.innerText.length);
+
+          choiceElement.innerText = beforeStr;
+          textNodeContent = '\u00A0' + afterStr;
+        }
+
+        var textNode = document.createTextNode(textNodeContent);
 
         choiceElement.parentNode.insertBefore(textNode, choiceElement.nextSibling);
 
-        //TODO: compatible it with older version of IE
         var createdRange = document.createRange();
         createdRange.setStart(textNode, 1);
         createdRange.collapse(true);
 
-        selectedRange.removeAllRanges();
-        selectedRange.addRange(createdRange);
+        selection.removeAllRanges();
+        selection.addRange(createdRange);
 
         e.preventDefault();
       }
