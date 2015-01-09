@@ -295,9 +295,7 @@
     if (selectedRange.focusNode == editableDiv || selectedRange.focusNode.nodeType == 3) {
       var choiceLink = document.createElement('a');
       choiceLink.className = _c.call(this, 'choiceItem');
-      choiceLink.innerText = this._stackActivator + item[activator.displayKey];
-      choiceLink.setAttribute('data-value', item[activator.valueKey]);
-      choiceLink.setAttribute('data-activator', activator.name);
+      _setChoiceElementAttrs.call(this, choiceLink, this._stackActivator, item[activator.valueKey], item[activator.displayKey], activator);
 
       var textNode = document.createTextNode('\u00A0');
 
@@ -316,6 +314,17 @@
     _changeMode.call(this, this._modes.normal);
     _toggleChoiceListState.call(this, false);
   };
+
+  /**
+   * Append and set attributes to the choice element
+   */
+  function _setChoiceElementAttrs (choiceLink, activatorKey, value, display, activator) {
+    choiceLink.innerText = activatorKey + display;
+    choiceLink.setAttribute('data-value', value);
+    choiceLink.setAttribute('data-display', display);
+    choiceLink.setAttribute('data-key', activatorKey);
+    choiceLink.setAttribute('data-activator', activator.name);
+  }
 
   /**
    * Fill choices list with the corresponding source
@@ -634,10 +643,11 @@
       if (activator.customChoice) {
         //its okay if user change the content of the choice
         //we will alter attributes for the choice as well
- //       choiceElement.setAttribute('data-value', choiceElement.innerText);
+
+        var activatorParts = _isActivatorText.call(this, choiceElement.innerText);
+        _setChoiceElementAttrs.call(this, choiceElement, activatorParts.activatorKey, activatorParts.hintText, activatorParts.hintText, activatorParts.activator);
       } else {
         //in this part we should remove the choice element and convert it to text
-
         var textElement = document.createTextNode(choiceElement.innerText);
 
         //add the text element and remove the hint element
