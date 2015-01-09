@@ -639,6 +639,25 @@
     if (this._currentMode == this._modes.normal && /choiceItem/.test(focusNode.parentNode.className)) {
       var choiceElement = focusNode.parentNode;
 
+      //we are at the end of the choice element
+      if (/\s/.test(String.fromCharCode(e.which)) && choiceElement.innerText.length == document.getSelection().getRangeAt(0).startOffset) {
+        var selectedRange = document.getSelection();
+
+        var textNode = document.createTextNode('\u00A0');
+
+        choiceElement.parentNode.insertBefore(textNode, choiceElement.nextSibling);
+
+        //TODO: compatible it with older version of IE
+        var createdRange = document.createRange();
+        createdRange.setStart(textNode, 1);
+        createdRange.collapse(true);
+
+        selectedRange.removeAllRanges();
+        selectedRange.addRange(createdRange);
+
+        e.preventDefault();
+      }
+
       //it seems user is changing the choice content
       if (activator.customChoice) {
         //its okay if user change the content of the choice
