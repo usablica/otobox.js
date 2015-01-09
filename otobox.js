@@ -663,6 +663,7 @@
           var beforeStr = choiceElement.innerText.substr(0, selectionRange.startOffset);
           var afterStr = choiceElement.innerText.substr(selectionRange.startOffset, choiceElement.innerText.length);
 
+          //first alter the content of the choice link
           choiceElement.innerText = beforeStr;
           textNodeContent = '\u00A0' + afterStr;
         }
