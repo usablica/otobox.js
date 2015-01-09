@@ -132,6 +132,7 @@
    * An example of activator object:
    *
    * {
+   *   name: 'mention.array',
    *   key: /./,
    *   source: 'http://example.com/boo.json',
    *   allowedChars: /[a-zA-Z]+/,
@@ -142,7 +143,7 @@
    */
   function _addActivator (activatorObject) {
     if (activatorObject != null ) {
-      if (typeof (activatorObject.key) != 'undefined' && typeof (activatorObject.source) != 'undefined') {
+      if (typeof (activatorObject.key) != 'undefined' && typeof (activatorObject.source) != 'undefined' && typeof (activatorObject.name) != 'undefined') {
         //check allowed chars regex
         activatorObject.allowedChars = _normalizeActivatorAllowedCharsRegExp.call(this, activatorObject);
 
@@ -158,7 +159,7 @@
 
         this._activators.push(activatorObject);
       } else {
-        _error.call(this, 'key and source fields are mandatory for activator object.');
+        _error.call(this, 'Name, key and source fields are mandatory for activator object.');
       }
     } else {
       _error.call(this, 'Activator object is empty.');
@@ -184,14 +185,14 @@
     }
 
     return regex;
-  }
+  };
 
   /**
    * Normalize activator's allowed character allowed chars
    */
   function _normalizeActivatorAllowedCharsRegExp (activator) {
     return activator.allowedChars || /.+/;
-  }
+  };
 
   /**
    * Is the pressed key is an activator key?
@@ -281,7 +282,7 @@
     }
 
     _setTargetObjectValue.call(this, editableDiv.innerText);
-  }
+  };
 
   /**
    * Set the choice
@@ -289,12 +290,14 @@
   function _setChoice (item) {
     var editableDiv = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv'));
     var selectedRange = document.getSelection();
+    var activator = this._currentActivator;
 
     if (selectedRange.focusNode == editableDiv || selectedRange.focusNode.nodeType == 3) {
       var choiceLink = document.createElement('a');
       choiceLink.className = _c.call(this, 'choiceItem');
-      choiceLink.innerText = this._stackActivator + item[this._options.displayKey];
-      choiceLink.setAttribute('data-value', item[this._options.valueKey]);
+      choiceLink.innerText = this._stackActivator + item[activator.displayKey];
+      choiceLink.setAttribute('data-value', item[activator.valueKey]);
+      choiceLink.setAttribute('data-activator', activator.name);
 
       var textNode = document.createTextNode('\u00A0');
 
@@ -312,7 +315,7 @@
 
     _changeMode.call(this, this._modes.normal);
     _toggleChoiceListState.call(this, false);
-  }
+  };
 
   /**
    * Fill choices list with the corresponding source
@@ -394,7 +397,7 @@
       this._stackActivator = '';
       this._currentMode = this._modes.insert;
     }
-  }
+  };
 
   /**
    * Remove hint element and change it to a text element
@@ -420,7 +423,7 @@
       selectedRange.addRange(createdRange);
     }
 
-  }
+  };
 
   /**
    * Set value to target object
@@ -435,7 +438,7 @@
       //textarea
       targetObject.innerText = value;
     }
-  }
+  };
 
   /**
    * Get current value of targetObject
@@ -450,7 +453,7 @@
       //textarea
       return targetObject.innerText;
     }
-  }
+  };
 
   /**
    * Check to see if the user is typing in a hint area
@@ -496,7 +499,7 @@
     }
 
     return _isActivatorText.call(this, before + after);
-  }
+  };
 
   /**
    * Check if the given text can match against one of activators
@@ -512,10 +515,8 @@
 
         //first match the activatorkey
         if (regex.test(activatorKey)) {
-          var allowedCharsRegExp = _normalizeActivatorAllowedCharsRegExp.call(this, activator);
-
-          //then check if all
-          if (allowedCharsRegExp.test(hint)) {
+          //then check if the whole part of the text is match
+          if (activator.allowedChars.test(hint)) {
             return {
               activator: activator,
               activatorKey: activatorKey,
@@ -527,7 +528,7 @@
     }
 
     return null;
-  }
+  };
 
   /**
    * Place hint element at the current range
@@ -548,7 +549,75 @@
     selectedRange.addRange(createdRange);
 
     return hintElement;
-  }
+  };
+
+  /**
+   * check if the pressed key is in the hint area
+   */
+  function _handleHintArea (e) {
+    var targetObject = this._targetObject;
+
+    if (this._currentMode == this._modes.normal) {
+      //check and see if user is typing in a hint area that is not considered as a hint element already
+      var activatorParts = _isHintArea.call(this);
+
+      if (activatorParts != null) {
+        _changeMode.call(this, this._modes.insert);
+        this._currentActivator = activatorParts.activator;
+        this._stackActivator = activatorParts.activatorKey;
+        this._stack = activatorParts.hintText;
+
+        //place the hint element first
+        var hintElement = _placeHintElement.call(this, this._stackActivator + this._stack);
+
+        //and them eliminate the text
+        var prevElement = hintElement.previousSibling;
+
+        if (prevElement.nodeType == 3) {
+          prevElement.textContent = '';
+        }
+      }
+    }
+  };
+
+  /**
+   * check if the pressed key is for one of activators
+   */
+  function _handleActivatorKey (e) {
+    var targetObject = this._targetObject;
+    var activatorObject = _isActivatorKey.call(this, String.fromCharCode(e.which), targetObject);
+
+    if (this._currentMode == this._modes.normal && activatorObject != null) {
+      //set correct mode and current activator
+      _changeMode.call(this, this._modes.insert);
+      this._currentActivator = activatorObject;
+      this._stackActivator = String.fromCharCode(e.which);
+
+      //append hint element
+      _placeHintElement.call(this, String.fromCharCode(e.which));
+
+      e.preventDefault()
+    } else {
+      if (this._currentMode == this._modes.insert) {
+        var activator = this._currentActivator;
+
+        //check if the entered character is valid or not
+        if (activator.allowedChars.test(String.fromCharCode(e.which))) {
+          this._stack += String.fromCharCode(e.which);
+
+          var sourceFunction = _routeToSource.call(this);
+
+          _fillChoicesList.call(this, sourceFunction);
+
+          //show choices list
+          _toggleChoiceListState.call(this, true);
+        } else {
+          _changeMode.call(this, this._modes.normal);
+          _toggleChoiceListState.call(this, false);
+        }
+      }
+    }
+  };
 
   /**
    * Add binding keys
@@ -559,64 +628,8 @@
     var editableDiv = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv'));
 
     editableDiv.onkeypress = function (e) {
-
-      //we should perform this checking in onkeyup event since we need backspace, delete and other keys
-      if (self._currentMode == self._modes.normal) {
-        //check and see if user is typing in a hint area that is not considered as a hint element already
-        var activatorParts = _isHintArea.call(self);
-
-        if (activatorParts != null) {
-          _changeMode.call(self, self._modes.insert);
-          self._currentActivator = activatorParts.activator;
-          self._stackActivator = activatorParts.activatorKey;
-          self._stack = activatorParts.hintText;
-
-          //place the hint element first
-          var hintElement = _placeHintElement.call(self, self._stackActivator + self._stack);
-
-          //and them eliminate the text
-          var prevElement = hintElement.previousSibling;
-
-          if (prevElement.nodeType == 3) {
-           prevElement.textContent = '';
-          }
-        }
-      }
-
-
-      var activatorObject = _isActivatorKey.call(self, String.fromCharCode(e.which), targetObject);
-
-      if (self._currentMode == self._modes.normal && activatorObject != null) {
-        //set correct mode and current activator
-        _changeMode.call(self, self._modes.insert);
-        self._currentActivator = activatorObject;
-        self._stackActivator = String.fromCharCode(e.which);
-
-        //append hint element
-        _placeHintElement.call(self, String.fromCharCode(e.which));
-
-        e.preventDefault()
-      } else {
-        if (self._currentMode == self._modes.insert) {
-          var activator = self._currentActivator;
-          var allowedChars = _normalizeActivatorAllowedCharsRegExp.call(self, activator);
-
-          //check if the entered character is valid or not
-          if (allowedChars.test(String.fromCharCode(e.which))) {
-            self._stack += String.fromCharCode(e.which);
-
-            var sourceFunction = _routeToSource.call(self);
-
-            _fillChoicesList.call(self, sourceFunction);
-
-            //show choices list
-            _toggleChoiceListState.call(self, true);
-          } else {
-            _changeMode.call(self, self._modes.normal);
-            _toggleChoiceListState.call(self, false);
-          }
-        }
-      }
+      _handleHintArea.call(self, e);
+      _handleActivatorKey.call(self, e);
     };
 
     editableDiv.onkeyup = function (e) {
