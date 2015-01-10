@@ -685,15 +685,16 @@
       if (/\s/.test(String.fromCharCode(e.which))) {
         var selection = document.getSelection();
         var selectionRange = selection.getRangeAt(0);
+        var startOffset = selectionRange.startOffset;
 
         var textNodeContent = '';
         //we are at the end of the choice element
-        if (choiceElement.innerText.length == selectionRange.startOffset) {
+        if (choiceElement.innerText.length == startOffset) {
           textNodeContent = '\u00A0';
         } else {
           //other parts of the choice element
-          var beforeStr = choiceElement.innerText.substr(0, selectionRange.startOffset);
-          var afterStr = choiceElement.innerText.substr(selectionRange.startOffset, choiceElement.innerText.length);
+          var beforeStr = choiceElement.innerText.substr(0, startOffset);
+          var afterStr = choiceElement.innerText.substr(startOffset, choiceElement.innerText.length);
 
           //first alter the content of the choice link
           choiceElement.innerText = beforeStr;
@@ -705,7 +706,7 @@
         choiceElement.parentNode.insertBefore(textNode, choiceElement.nextSibling);
 
         var createdRange = document.createRange();
-        createdRange.setStart(textNode, 1);
+        createdRange.setStart(textNode, startOffset);
         createdRange.collapse(true);
 
         selection.removeAllRanges();
@@ -716,11 +717,16 @@
 
       //it seems user is changing the choice content
       if (activator.customChoice) {
+
         //its okay if user change the content of the choice
         //we will alter attributes for the choice as well
         var activatorParts = _isActivatorText.call(this, choiceElement.innerText);
         _setChoiceElementAttrs.call(this, choiceElement, activatorParts.activatorKey, activatorParts.hintText, activatorParts.hintText, activatorParts.activator);
       } else {
+        var selectedRange = document.getSelection();
+        var startOffset = selectedRange.getRangeAt(0).startOffset;
+        var createdRange = document.createRange();
+
         //in this part we should remove the choice element and convert it to text
         var textElement = document.createTextNode(choiceElement.innerText);
 
@@ -728,9 +734,7 @@
         choiceElement.parentNode.insertBefore(textElement, choiceElement);
         choiceElement.parentNode.removeChild(choiceElement);
 
-        var selectedRange = document.getSelection();
-        var createdRange = document.createRange();
-        createdRange.setStart(textElement, selectedRange.getRangeAt(0).startOffset);
+        createdRange.setStart(textElement, startOffset);
         createdRange.collapse(true);
 
         selectedRange.removeAllRanges();
@@ -815,6 +819,9 @@
 
         //check and see if the hint element is empty
         _handleEmptyHintElement.call(self);
+
+        //check if the user is changing the choice element
+        _handleChoiceChange.call(self, e);
       }
 
       if (e.keyCode == 37 || e.keyCode == 39) {
