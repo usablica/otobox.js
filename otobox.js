@@ -157,6 +157,9 @@
         activatorObject.displayKey = activatorObject.displayKey || this._options.displayKey;
         activatorObject.valueKey   = activatorObject.valueKey   || this._options.valueKey;
 
+        //include activator key in display or not
+        activatorObject.includeKey = typeof (activatorObject.includeKey) != 'undefined' ? !!activatorObject.includeKey : true;
+
         this._activators.push(activatorObject);
       } else {
         _error.call(this, 'Name, key and source fields are mandatory for activator object.');
@@ -299,7 +302,7 @@
    * Append and set attributes to the choice element
    */
   function _setChoiceElementAttrs (choiceLink, activatorKey, value, display, activator) {
-    choiceLink.innerText = activatorKey + display;
+    choiceLink.innerText = (activator.includeKey ? activatorKey : '') + display;
     choiceLink.setAttribute('data-value', value);
     choiceLink.setAttribute('data-display', display);
     choiceLink.setAttribute('data-key', activatorKey);
@@ -523,16 +526,15 @@
    * Check if the given text can match against one of activators
    */
   function _isActivatorText (text) {
-    var activatorKey = text[0];
-    var hint = text.substr(1, text.length - 1);
-
     if (this._activators.length > 0) {
+      var activatorKey = text[0];
+      var hint = text.substr(1, text.length - 1);
+
       for (var i = 0; i < this._activators.length; i++) {
         var activator = this._activators[i];
-        var regex = _normalizeActivatorKeyRegExp.call(this, activator);
 
         //first match the activatorkey
-        if (regex.test(activatorKey)) {
+        if (activator.key.test(activatorKey)) {
           //then check if the whole part of the text is match
           if (activator.allowedChars.test(hint)) {
             return {
@@ -541,6 +543,21 @@
               hintText: hint
             };
           }
+        }
+      }
+
+      //and then check if the whole text can match with
+      //one of activators allowedchars. Please note that
+      //developers can set `includekey` to `false`.
+      for (var i = 0; i < this._activators.length; i++) {
+        var activator = this._activators[i];
+
+        if (!activator.includeKey && activator.allowedChars.test(text)) {
+          return {
+            activator: activator,
+            activatorKey: activatorKey,
+            hintText: hint
+          };
         }
       }
     }
@@ -657,7 +674,7 @@
         var textNodeContent = '';
         //we are at the end of the choice element
         if (choiceElement.innerText.length == selectionRange.startOffset) {
-          var textNodeContent = '\u00A0';
+          textNodeContent = '\u00A0';
         } else {
           //other parts of the choice element
           var beforeStr = choiceElement.innerText.substr(0, selectionRange.startOffset);
@@ -686,7 +703,6 @@
       if (activator.customChoice) {
         //its okay if user change the content of the choice
         //we will alter attributes for the choice as well
-
         var activatorParts = _isActivatorText.call(this, choiceElement.innerText);
         _setChoiceElementAttrs.call(this, choiceElement, activatorParts.activatorKey, activatorParts.hintText, activatorParts.hintText, activatorParts.activator);
       } else {
@@ -707,6 +723,20 @@
       }
     }
   };
+
+  /**
+   * Check and remove hint element if it's empty
+   */
+  function _handleEmptyHintElement () {
+    if (this._currentMode == this._modes.insert) {
+      var hintElement = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv') + ' .' + _c.call(this, 'hint'));
+
+      if (hintElement == null || hintElement.innerText == '' || hintElement.innerText == this._stackActivator) {
+        _changeMode.call(this, this._modes.normal);
+        _toggleChoiceListState.call(this, false);
+      }
+    }
+  }
 
   /**
    * Add binding keys
@@ -730,13 +760,14 @@
     //I don't know whether can we handle backspace or delete keys with onkeypress event or not
     //So I'm going to use onkeydown to handle delete and backspace
     editableDiv.onkeydown = function (e) {
+
       if (e.keyCode == 37 || e.keyCode == 39) {
         //left or right
         _changeMode.call(self, self._modes.normal);
         _toggleChoiceListState.call(self, false);
       }
 
-      if (e.keyCode == '32') {
+      if (e.keyCode == 32) {
         //whitespace
         _changeMode.call(self, self._modes.normal);
         _toggleChoiceListState.call(self, false);
@@ -748,11 +779,23 @@
         _toggleChoiceListState.call(self, false);
       }
 
+      if (e.keyCode == 46) {
+        //delete
+
+        //check and see if the hint element is empty
+        _handleEmptyHintElement.call(self);
+      }
+
       if (e.keyCode == 8) {
         //backspace
-        self._stack = self._stack.substr(0, self._stack.length - 1);
 
+        //check and see if the hint element is empty
+        _handleEmptyHintElement.call(self);
+
+        //update stack and show the new list
         if (self._currentMode == self._modes.insert) {
+          self._stack = self._stack.substr(0, self._stack.length - 1);
+
           var sourceFunction = _routeToSource.call(self);
 
           _fillChoicesList.call(self, sourceFunction);
