@@ -281,7 +281,7 @@
       hintElement.parentNode.removeChild(hintElement);
     }
 
-    _setTargetObjectValue.call(this, editableDiv.innerText);
+    _setTargetObjectValue.call(this, editableDiv.textContent);
   };
 
   /**
@@ -299,7 +299,7 @@
    * Append and set attributes to the choice element
    */
   function _setChoiceElementAttrs (choiceLink, activatorKey, value, display, activator) {
-    choiceLink.innerText = activatorKey + display;
+    choiceLink.textContent = activatorKey + display;
     choiceLink.setAttribute('data-value', value);
     choiceLink.setAttribute('data-display', display);
     choiceLink.setAttribute('data-key', activatorKey);
@@ -357,7 +357,7 @@
             var anchor = document.createElement('a');
             anchor.href = 'javascript:void(0);';
             anchor.setAttribute('data-value', resultItem[self._options.valueKey]);
-            anchor.innerText = resultItem[self._options.displayKey];
+            anchor.textContent = resultItem[self._options.displayKey];
 
             (function (resultItem) {
               anchor.onclick = function () {
@@ -425,7 +425,7 @@
     var hintElement = editableDiv.querySelector('.' + _c.call(this, 'hint'));
 
     if (hintElement != null) {
-      var textElement = document.createTextNode(hintElement.innerText);
+      var textElement = document.createTextNode(hintElement.textContent);
 
       //add the text element and remove the hint element
       hintElement.parentNode.insertBefore(textElement, hintElement);
@@ -435,7 +435,7 @@
 
       //TODO: compatible it with older versions of IE
       var createdRange = document.createRange();
-      createdRange.setStart(textElement, hintElement.innerText.length);
+      createdRange.setStart(textElement, hintElement.textContent.length);
 
       selectedRange.removeAllRanges();
       selectedRange.addRange(createdRange);
@@ -454,7 +454,7 @@
       targetObject.value = value;
     } else {
       //textarea
-      targetObject.innerText = value;
+      targetObject.textContent = value;
     }
   };
 
@@ -469,7 +469,7 @@
       return targetObject.value;
     } else {
       //textarea
-      return targetObject.innerText;
+      return targetObject.textContent;
     }
   };
 
@@ -489,7 +489,7 @@
     if (selectedRange.startContainer.nodeType == 3) {
       var inputValue = selectedRange.startContainer.textContent;
     } else {
-      var inputValue = editableDiv.innerText;
+      var inputValue = editableDiv.textContent;
     }
 
     var before = '';
@@ -554,13 +554,14 @@
   function _placeHintElement (text) {
     var hintElement = document.createElement('span');
     hintElement.className = _c.call(this, 'hint');
-    hintElement.innerText = text;
+    hintElement.textContent = text;
 
     var selectedRange = document.getSelection();
     selectedRange.getRangeAt(0).insertNode(hintElement);
 
     //TODO: compatible it with older versions of IE
     var createdRange = document.createRange();
+    console.log(createdRange, hintElement);
     createdRange.setStart(hintElement, 1);
 
     selectedRange.removeAllRanges();
@@ -656,15 +657,15 @@
 
         var textNodeContent = '';
         //we are at the end of the choice element
-        if (choiceElement.innerText.length == selectionRange.startOffset) {
+        if (choiceElement.textContent.length == selectionRange.startOffset) {
           var textNodeContent = '\u00A0';
         } else {
           //other parts of the choice element
-          var beforeStr = choiceElement.innerText.substr(0, selectionRange.startOffset);
-          var afterStr = choiceElement.innerText.substr(selectionRange.startOffset, choiceElement.innerText.length);
+          var beforeStr = choiceElement.textContent.substr(0, selectionRange.startOffset);
+          var afterStr = choiceElement.textContent.substr(selectionRange.startOffset, choiceElement.textContent.length);
 
           //first alter the content of the choice link
-          choiceElement.innerText = beforeStr;
+          choiceElement.textContent = beforeStr;
           textNodeContent = '\u00A0' + afterStr;
         }
 
@@ -687,11 +688,11 @@
         //its okay if user change the content of the choice
         //we will alter attributes for the choice as well
 
-        var activatorParts = _isActivatorText.call(this, choiceElement.innerText);
+        var activatorParts = _isActivatorText.call(this, choiceElement.textContent);
         _setChoiceElementAttrs.call(this, choiceElement, activatorParts.activatorKey, activatorParts.hintText, activatorParts.hintText, activatorParts.activator);
       } else {
         //in this part we should remove the choice element and convert it to text
-        var textElement = document.createTextNode(choiceElement.innerText);
+        var textElement = document.createTextNode(choiceElement.textContent);
 
         //add the text element and remove the hint element
         choiceElement.parentNode.insertBefore(textElement, choiceElement);
@@ -699,6 +700,7 @@
 
         var selectedRange = document.getSelection();
         var createdRange = document.createRange();
+
         createdRange.setStart(textElement, selectedRange.getRangeAt(0).startOffset);
         createdRange.collapse(true);
 
@@ -724,7 +726,7 @@
 
     editableDiv.onkeyup = function (e) {
       //set value to target element
-      _setTargetObjectValue.call(self, editableDiv.innerText);
+      _setTargetObjectValue.call(self, editableDiv.textContent);
     };
 
     //I don't know whether can we handle backspace or delete keys with onkeypress event or not
