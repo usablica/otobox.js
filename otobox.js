@@ -181,7 +181,7 @@
     }
 
     return null;
-  }
+  };
 
   /**
    * Normalize activator's activator key regex
@@ -751,7 +751,7 @@
         _toggleChoiceListState.call(this, false);
       }
     }
-  }
+  };
 
   /**
    * Update and show the new suggestions list
@@ -765,7 +765,7 @@
       //show choices list
       _toggleChoiceListState.call(this, true);
     }
-  }
+  };
 
   /**
    * Update and set the new stack value according to the hint element
@@ -784,7 +784,7 @@
         this._stack = hintElement.innerText;
       }
     }
-  }
+  };
 
   /**
    * Add binding keys
