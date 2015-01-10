@@ -170,6 +170,20 @@
   };
 
   /**
+   * Get an activator by name
+   */
+  function _getActivator (name) {
+    for (var i = 0; i < this._activators.length; i++) {
+      var activator = this._activators[i];
+
+      if (activator.name == name)
+        return activator;
+    }
+
+    return null;
+  }
+
+  /**
    * Normalize activator's activator key regex
    */
   function _normalizeActivatorKeyRegExp (activator) {
@@ -568,9 +582,10 @@
   /**
    * Place hint element at the current range
    */
-  function _placeHintElement (text) {
+  function _placeHintElement (text, activator) {
     var hintElement = document.createElement('span');
     hintElement.className = _c.call(this, 'hint');
+    hintElement.setAttribute('data-activator', activator.name);
     hintElement.innerText = text;
 
     var selectedRange = document.getSelection();
@@ -603,7 +618,7 @@
         this._stack = activatorParts.hintText;
 
         //place the hint element first
-        var hintElement = _placeHintElement.call(this, this._stackActivator + this._stack);
+        var hintElement = _placeHintElement.call(this, this._stackActivator + this._stack, activatorParts.activator);
 
         //and them eliminate the text
         var prevElement = hintElement.previousSibling;
@@ -630,7 +645,7 @@
       this._stackActivator = String.fromCharCode(e.which);
 
       //append hint element
-      _placeHintElement.call(this, String.fromCharCode(e.which));
+      _placeHintElement.call(this, String.fromCharCode(e.which), activatorObject);
 
       e.preventDefault()
     } else {
@@ -739,6 +754,39 @@
   }
 
   /**
+   * Update and show the new suggestions list
+   */
+  function _handleUpdatedChoices () {
+    if (this._currentMode == this._modes.insert) {
+      var sourceFunction = _routeToSource.call(this);
+
+      _fillChoicesList.call(this, sourceFunction);
+
+      //show choices list
+      _toggleChoiceListState.call(this, true);
+    }
+  }
+
+  /**
+   * Update and set the new stack value according to the hint element
+   */
+  function _updateStack () {
+
+    if (this._currentMode == this._modes.insert) {
+      var hintElement = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv') + ' .' + _c.call(this, 'hint'));
+      var activatorName = hintElement.getAttribute('data-activator');
+      var activator = _getActivator.call(this, activatorName);
+
+      if (activator.includeKey) {
+        console.log(hintElement.innerText);
+        this._stack = hintElement.innerText.substr(1, hintElement.innerText.length);
+      } else {
+        this._stack = hintElement.innerText;
+      }
+    }
+  }
+
+  /**
    * Add binding keys
    */
   function _addBindingKeys (targetObject) {
@@ -755,11 +803,19 @@
     editableDiv.onkeyup = function (e) {
       //set value to target element
       _setTargetObjectValue.call(self, editableDiv.innerText);
-    };
 
-    //I don't know whether can we handle backspace or delete keys with onkeypress event or not
-    //So I'm going to use onkeydown to handle delete and backspace
-    editableDiv.onkeydown = function (e) {
+      if (e.keyCode == 46 || e.keyCode == 8) {
+        //delete or backspace
+
+        //update stack
+        _updateStack.call(self);
+
+        //show updated list to the user
+        _handleUpdatedChoices.call(self);
+
+        //check and see if the hint element is empty
+        _handleEmptyHintElement.call(self);
+      }
 
       if (e.keyCode == 37 || e.keyCode == 39) {
         //left or right
@@ -777,32 +833,6 @@
         //escape
         _changeMode.call(self, self._modes.normal);
         _toggleChoiceListState.call(self, false);
-      }
-
-      if (e.keyCode == 46) {
-        //delete
-
-        //check and see if the hint element is empty
-        _handleEmptyHintElement.call(self);
-      }
-
-      if (e.keyCode == 8) {
-        //backspace
-
-        //check and see if the hint element is empty
-        _handleEmptyHintElement.call(self);
-
-        //update stack and show the new list
-        if (self._currentMode == self._modes.insert) {
-          self._stack = self._stack.substr(0, self._stack.length - 1);
-
-          var sourceFunction = _routeToSource.call(self);
-
-          _fillChoicesList.call(self, sourceFunction);
-
-          //show choices list
-          _toggleChoiceListState.call(self, true);
-        }
       }
     };
   };
