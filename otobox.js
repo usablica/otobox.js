@@ -157,6 +157,9 @@
         activatorObject.displayKey = activatorObject.displayKey || this._options.displayKey;
         activatorObject.valueKey   = activatorObject.valueKey   || this._options.valueKey;
 
+        //include activator key in display or not
+        activatorObject.includeKey = typeof (activatorObject.includeKey) != 'undefined' ? !!activatorObject.includeKey : true;
+
         this._activators.push(activatorObject);
       } else {
         _error.call(this, 'Name, key and source fields are mandatory for activator object.');
@@ -164,6 +167,20 @@
     } else {
       _error.call(this, 'Activator object is empty.');
     }
+  };
+
+  /**
+   * Get an activator by name
+   */
+  function _getActivator (name) {
+    for (var i = 0; i < this._activators.length; i++) {
+      var activator = this._activators[i];
+
+      if (activator.name == name)
+        return activator;
+    }
+
+    return null;
   };
 
   /**
@@ -299,7 +316,9 @@
    * Append and set attributes to the choice element
    */
   function _setChoiceElementAttrs (choiceLink, activatorKey, value, display, activator) {
-    choiceLink.textContent = activatorKey + display;
+
+    choiceLink.textContent = (activator.includeKey ? activatorKey : '') + display;
+
     choiceLink.setAttribute('data-value', value);
     choiceLink.setAttribute('data-display', display);
     choiceLink.setAttribute('data-key', activatorKey);
@@ -523,16 +542,15 @@
    * Check if the given text can match against one of activators
    */
   function _isActivatorText (text) {
-    var activatorKey = text[0];
-    var hint = text.substr(1, text.length - 1);
-
     if (this._activators.length > 0) {
+      var activatorKey = text[0];
+      var hint = text.substr(1, text.length - 1);
+
       for (var i = 0; i < this._activators.length; i++) {
         var activator = this._activators[i];
-        var regex = _normalizeActivatorKeyRegExp.call(this, activator);
 
         //first match the activatorkey
-        if (regex.test(activatorKey)) {
+        if (activator.key.test(activatorKey)) {
           //then check if the whole part of the text is match
           if (activator.allowedChars.test(hint)) {
             return {
@@ -543,6 +561,21 @@
           }
         }
       }
+
+      //and then check if the whole text can match with
+      //one of activators allowedchars. Please note that
+      //developers can set `includekey` to `false`.
+      for (var i = 0; i < this._activators.length; i++) {
+        var activator = this._activators[i];
+
+        if (!activator.includeKey && activator.allowedChars.test(text)) {
+          return {
+            activator: activator,
+            activatorKey: activatorKey,
+            hintText: hint
+          };
+        }
+      }
     }
 
     return null;
@@ -551,10 +584,13 @@
   /**
    * Place hint element at the current range
    */
-  function _placeHintElement (text) {
+  function _placeHintElement (text, activator) {
     var hintElement = document.createElement('span');
     hintElement.className = _c.call(this, 'hint');
+
+    hintElement.setAttribute('data-activator', activator.name);
     hintElement.textContent = text;
+
 
     var selectedRange = document.getSelection();
     selectedRange.getRangeAt(0).insertNode(hintElement);
@@ -587,7 +623,7 @@
         this._stack = activatorParts.hintText;
 
         //place the hint element first
-        var hintElement = _placeHintElement.call(this, this._stackActivator + this._stack);
+        var hintElement = _placeHintElement.call(this, this._stackActivator + this._stack, activatorParts.activator);
 
         //and them eliminate the text
         var prevElement = hintElement.previousSibling;
@@ -614,7 +650,7 @@
       this._stackActivator = String.fromCharCode(e.which);
 
       //append hint element
-      _placeHintElement.call(this, String.fromCharCode(e.which));
+      _placeHintElement.call(this, String.fromCharCode(e.which), activatorObject);
 
       e.preventDefault()
     } else {
@@ -657,8 +693,10 @@
 
         var textNodeContent = '';
         //we are at the end of the choice element
+
         if (choiceElement.textContent.length == selectionRange.startOffset) {
-          var textNodeContent = '\u00A0';
+          textNodeContent = '\u00A0';
+
         } else {
           //other parts of the choice element
           var beforeStr = choiceElement.textContent.substr(0, selectionRange.startOffset);
@@ -711,6 +749,53 @@
   };
 
   /**
+   * Check and remove hint element if it's empty
+   */
+  function _handleEmptyHintElement () {
+    if (this._currentMode == this._modes.insert) {
+      var hintElement = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv') + ' .' + _c.call(this, 'hint'));
+
+      if (hintElement == null || hintElement.innerText == '' || hintElement.innerText == this._stackActivator) {
+        _changeMode.call(this, this._modes.normal);
+        _toggleChoiceListState.call(this, false);
+      }
+    }
+  };
+
+  /**
+   * Update and show the new suggestions list
+   */
+  function _handleUpdatedChoices () {
+    if (this._currentMode == this._modes.insert) {
+      var sourceFunction = _routeToSource.call(this);
+
+      _fillChoicesList.call(this, sourceFunction);
+
+      //show choices list
+      _toggleChoiceListState.call(this, true);
+    }
+  };
+
+  /**
+   * Update and set the new stack value according to the hint element
+   */
+  function _updateStack () {
+
+    if (this._currentMode == this._modes.insert) {
+      var hintElement = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv') + ' .' + _c.call(this, 'hint'));
+      var activatorName = hintElement.getAttribute('data-activator');
+      var activator = _getActivator.call(this, activatorName);
+
+      if (activator.includeKey) {
+        console.log(hintElement.innerText);
+        this._stack = hintElement.innerText.substr(1, hintElement.innerText.length);
+      } else {
+        this._stack = hintElement.innerText;
+      }
+    }
+  };
+
+  /**
    * Add binding keys
    */
   function _addBindingKeys (targetObject) {
@@ -727,18 +812,27 @@
     editableDiv.onkeyup = function (e) {
       //set value to target element
       _setTargetObjectValue.call(self, editableDiv.textContent);
-    };
 
-    //I don't know whether can we handle backspace or delete keys with onkeypress event or not
-    //So I'm going to use onkeydown to handle delete and backspace
-    editableDiv.onkeydown = function (e) {
+      if (e.keyCode == 46 || e.keyCode == 8) {
+        //delete or backspace
+
+        //update stack
+        _updateStack.call(self);
+
+        //show updated list to the user
+        _handleUpdatedChoices.call(self);
+
+        //check and see if the hint element is empty
+        _handleEmptyHintElement.call(self);
+      }
+
       if (e.keyCode == 37 || e.keyCode == 39) {
         //left or right
         _changeMode.call(self, self._modes.normal);
         _toggleChoiceListState.call(self, false);
       }
 
-      if (e.keyCode == '32') {
+      if (e.keyCode == 32) {
         //whitespace
         _changeMode.call(self, self._modes.normal);
         _toggleChoiceListState.call(self, false);
@@ -748,20 +842,6 @@
         //escape
         _changeMode.call(self, self._modes.normal);
         _toggleChoiceListState.call(self, false);
-      }
-
-      if (e.keyCode == 8) {
-        //backspace
-        self._stack = self._stack.substr(0, self._stack.length - 1);
-
-        if (self._currentMode == self._modes.insert) {
-          var sourceFunction = _routeToSource.call(self);
-
-          _fillChoicesList.call(self, sourceFunction);
-
-          //show choices list
-          _toggleChoiceListState.call(self, true);
-        }
       }
     };
   };
