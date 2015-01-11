@@ -316,7 +316,9 @@
    * Append and set attributes to the choice element
    */
   function _setChoiceElementAttrs (choiceLink, activatorKey, value, display, activator) {
+
     choiceLink.textContent = (activator.includeKey ? activatorKey : '') + display;
+
     choiceLink.setAttribute('data-value', value);
     choiceLink.setAttribute('data-display', display);
     choiceLink.setAttribute('data-key', activatorKey);
@@ -587,6 +589,7 @@
   function _placeHintElement (text, activator) {
     var hintElement = document.createElement('span');
     hintElement.className = _c.call(this, 'hint');
+
     hintElement.setAttribute('data-activator', activator.name);
     hintElement.textContent = text;
 
@@ -692,12 +695,16 @@
 
         var textNodeContent = '';
         //we are at the end of the choice element
+
         if (choiceElement.textContent.length == startOffset) {
+
           textNodeContent = '\u00A0';
+
         } else {
           //other parts of the choice element
           var beforeStr = choiceElement.textContent.substr(0, startOffset);
           var afterStr = choiceElement.textContent.substr(startOffset, choiceElement.textContent.length);
+
           isSpace = true;
 
           //first alter the content of the choice link
