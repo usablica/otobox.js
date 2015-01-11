@@ -676,6 +676,7 @@
   function _handleChoiceChange (e) {
     var focusNode = document.getSelection().focusNode;
     var activator = this._currentActivator;
+    var isSpace = false;
 
     if (this._currentMode == this._modes.normal && /choiceItem/.test(focusNode.parentNode.className)) {
       var choiceElement = focusNode.parentNode;
@@ -695,6 +696,7 @@
           //other parts of the choice element
           var beforeStr = choiceElement.innerText.substr(0, startOffset);
           var afterStr = choiceElement.innerText.substr(startOffset, choiceElement.innerText.length);
+          isSpace = true;
 
           //first alter the content of the choice link
           choiceElement.innerText = beforeStr;
@@ -706,7 +708,7 @@
         choiceElement.parentNode.insertBefore(textNode, choiceElement.nextSibling);
 
         var createdRange = document.createRange();
-        createdRange.setStart(textNode, startOffset);
+        createdRange.setStart(textNode, 1);
         createdRange.collapse(true);
 
         selection.removeAllRanges();
@@ -734,11 +736,13 @@
         choiceElement.parentNode.insertBefore(textElement, choiceElement);
         choiceElement.parentNode.removeChild(choiceElement);
 
-        createdRange.setStart(textElement, startOffset);
-        createdRange.collapse(true);
+        if (!isSpace) {
+          createdRange.setStart(textElement, startOffset);
+          createdRange.collapse(true);
 
-        selectedRange.removeAllRanges();
-        selectedRange.addRange(createdRange);
+          selectedRange.removeAllRanges();
+          selectedRange.addRange(createdRange);
+        }
       }
     }
   };
