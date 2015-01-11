@@ -1,0 +1,21 @@
+{
+    "name": "otobox.js",
+    "description": "Small, fast and easy-to-use JavaScript library to create autocomplete inputs",
+    "version": "0.1.0",
+    "author": "Afshin Mehrabani <afshin.meh@gmail.com>",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/usablica/otobox.js"
+    },
+    "devDependencies": {
+        "node-minify": "*"
+    },
+    "engine": [
+        "node >=0.1.90"
+    ],
+    "main": "otobox.js",
+    "spm": {
+        "main": "otobox.js",
+        "output": ["otobox.css"]
+    }
+}
