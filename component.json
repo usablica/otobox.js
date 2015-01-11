@@ -1,0 +1,13 @@
+{
+  "name": "otobox.js",
+  "repo": "usablica/otobox.js",
+  "description": "Small, fast and easy-to-use JavaScript library to create autocomplete inputs",
+  "version": "0.1.0",
+  "main": "otobox.js",
+  "scripts": [
+    "otobox.js"
+  ],
+  "styles": [
+    "otobox.css"
+  ]
+}

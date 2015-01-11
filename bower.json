@@ -1,0 +1,9 @@
+{
+  "name": "otobox.js",
+  "version": "0.1.0",
+  "description": "Small, fast and easy-to-use JavaScript library to create autocomplete inputs",
+  "keywords": ["autocomplete", "mention", "tag"],
+  "homepage": "http://usablica.github.io/otobox.js",
+  "author": "Afshin Mehrabani",
+  "main": ["otobox.js","otobox.css"]
+}
