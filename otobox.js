@@ -676,7 +676,9 @@
   function _handleChoiceChange (e) {
     var focusNode = document.getSelection().focusNode;
     var activator = this._currentActivator;
-    var isSpace = false;
+
+    //a flag to hold the state
+    var isSpaceBetween = false;
 
     if (this._currentMode == this._modes.normal && /choiceItem/.test(focusNode.parentNode.className)) {
       var choiceElement = focusNode.parentNode;
@@ -696,7 +698,7 @@
           //other parts of the choice element
           var beforeStr = choiceElement.innerText.substr(0, startOffset);
           var afterStr = choiceElement.innerText.substr(startOffset, choiceElement.innerText.length);
-          isSpace = true;
+          isSpaceBetween = true;
 
           //first alter the content of the choice link
           choiceElement.innerText = beforeStr;
@@ -736,7 +738,7 @@
         choiceElement.parentNode.insertBefore(textElement, choiceElement);
         choiceElement.parentNode.removeChild(choiceElement);
 
-        if (!isSpace) {
+        if (!isSpaceBetween) {
           createdRange.setStart(textElement, startOffset);
           createdRange.collapse(true);
 
