@@ -706,17 +706,15 @@
         //we are at the end of the choice element
 
         if (choiceElement.textContent.length == startOffset) {
-
           textNodeContent = '\u00A0';
-
         } else {
           //other parts of the choice element
-          var beforeStr = choiceElement.textContent.substr(0, startOffset);
+          var beforeStr = choiceElement.textContent.substr(0, startOffset).trim();
           var afterStr = choiceElement.textContent.substr(startOffset, choiceElement.textContent.length);
           isSpaceBetween = true;
 
           //first alter the content of the choice link
-          choiceElement.textContent = beforeStr.trim();
+          choiceElement.textContent = beforeStr;
           textNodeContent = '\u00A0' + afterStr;
         }
 
@@ -731,7 +729,9 @@
         selection.removeAllRanges();
         selection.addRange(createdRange);
 
-        e.preventDefault();
+        //well, we should remove the whitepsace that user is pressed
+        //I think this approach is the best
+        choiceElement.textContent = choiceElement.textContent.trim();
       }
 
       //it seems user is changing the choice content
