@@ -16,7 +16,7 @@ ul.otobox-choices {
     border-radius: 5px;
     outline: none;
     padding: 5px;
-    font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif;
+    font-family: 'helvetica neue',helvetica,arial,sans-serif;
     font-size: 12px;
 }
 .otobox-input-target {
@@ -41,6 +41,13 @@ ul.otobox-choices {
     padding: 0;
     margin: 0;
     list-style: none;
+}
+.otobox-wrapper .otobox-choices a {
+    display: block;
+    background-color: #E5E5E5;
+    border-bottom: 1px solid #ccc;
+    padding: 5px;
+    text-decoration: none;
 }
 .otobox-wrapper .otobox-hint {
     color: #ccc;

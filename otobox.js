@@ -740,7 +740,16 @@
         //its okay if user change the content of the choice
         //we will alter attributes for the choice as well
         var activatorParts = _isActivatorText.call(this, choiceElement.textContent);
-        _setChoiceElementAttrs.call(this, choiceElement, activatorParts.activatorKey, activatorParts.hintText, activatorParts.hintText, activatorParts.activator);
+
+        if (activatorParts != null) {
+          _setChoiceElementAttrs.call(this, choiceElement, activatorParts.activatorKey, activatorParts.hintText, activatorParts.hintText, activatorParts.activator);
+        } else {
+          var textElement = document.createTextNode(choiceElement.textContent);
+
+          choiceElement.parentNode.insertBefore(textElement, choiceElement);
+          choiceElement.parentNode.removeChild(choiceElement);
+        }
+
       } else {
         var selectedRange = document.getSelection();
         var startOffset = selectedRange.getRangeAt(0).startOffset;
@@ -842,6 +851,16 @@
 
         //check and see if the hint element is empty
         _handleEmptyHintElement.call(self);
+      }
+
+      if (e.keyCode == 38) {
+        //up
+
+      }
+
+      if (e.keyCode == 40) {
+        //down
+
       }
 
       if (e.keyCode == 37 || e.keyCode == 39) {
