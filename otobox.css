@@ -12,12 +12,15 @@ ul.otobox-choices {
     width: 0;
 }
 .otobox-wrapper .otobox-editableDiv {
-    border: 2px solid #ccc;
+    width: 100%;
+    line-height: 20px;
+    border: 2px solid #D5D5D5;
     border-radius: 5px;
     outline: none;
     padding: 5px;
     font-family: 'helvetica neue',helvetica,arial,sans-serif;
     font-size: 12px;
+    box-sizing: border-box;
 }
 .otobox-input-target {
     white-space: nowrap;
@@ -39,21 +42,39 @@ ul.otobox-choices {
 }
 .otobox-wrapper .otobox-choices {
     padding: 0;
-    margin: 0;
+    margin: -4px 0 0 0;
     list-style: none;
+    border-radius: 0 0 4px 4px;
+    overflow: hidden;
+    border: solid 2px #D5D5D5;
 }
 .otobox-wrapper .otobox-choices a {
     display: block;
-    background-color: #E5E5E5;
-    border-bottom: 1px solid #ccc;
+    background-color: #F3F5F5;
+    border-bottom: 1px solid #DDDDDD;
     padding: 5px;
     text-decoration: none;
+    color: #666;
+    line-height: 24px;
+    padding-left: 10px;
+}
+.otobox-wrapper .otobox-choices li:last-child a {
+    border-bottom: 0;
+}
+.otobox-wrapper .otobox-choices a:hover {
+    color: #FCFCFC;
+    background-color: #747474;
+}
+.otobox-wrapper .otobox-choices li.otobox-active a {
+    color: #FCFCFC;
+    background-color: #747474;
 }
 .otobox-wrapper .otobox-hint {
     color: #ccc;
 }
 .otobox-wrapper .otobox-choiceItem {
-    border: 1px solid black;
     border-radius: 3px;
-    padding: 1px;
+    background: #3A88A9;
+    padding: 3px;
+    color: #F5F5F5;
 }

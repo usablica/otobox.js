@@ -112,12 +112,14 @@
     editableDiv.setAttribute('contenteditable', true);
     editableDiv.setAttribute('data-placeholder', targetObject.placeholder);
     editableDiv.className = _c.call(this, 'editableDiv');
-    editableDiv.style.width = targetObjectSize.width + 'px';
+
+    //set width and height to the wrapper
+    wrapperDiv.style.width = targetObjectSize.width + 'px';
 
     //if it's textarea
     if (targetObject.nodeName.toLowerCase() == 'textarea') {
       editableDiv.className += ' ' + _c.call(this, 'textarea-target');
-      editableDiv.style.height = targetObjectSize.height + 'px';
+      wrapperDiv.style.height = targetObjectSize.height + 'px';
     } else {
       editableDiv.className += ' ' + _c.call(this, 'input-target');
     }
@@ -383,7 +385,8 @@
 
             var anchor = document.createElement('a');
             anchor.href = 'javascript:void(0);';
-            anchor.setAttribute('data-value', resultItem[self._options.valueKey]);
+            anchor.setAttribute('data-value', resultItem[self._currentActivator.valueKey]);
+            anchor.setAttribute('data-display', resultItem[self._currentActivator.displayKey]);
             anchor.textContent = resultItem[self._options.displayKey];
 
             (function (resultItem) {
@@ -820,6 +823,48 @@
   };
 
   /**
+   * Go to next choice and make it active
+   */
+  function _selectChoice (e, up) {
+    if (this._currentMode == this._modes.insert) {
+      var currentChoice = this._wrapper.querySelector('.' + _c.call(this, 'active'));
+
+      if (currentChoice != null) {
+        currentChoice.className = '';
+        if (up) {
+          var previousItem = currentChoice.previousSibling;
+
+          if (previousItem != null) {
+            previousItem.className = _c.call(this, 'active')
+          }
+        } else {
+          var nextItem = currentChoice.nextSibling;
+
+          if (nextItem != null) {
+            nextItem.className = _c.call(this, 'active')
+          }
+        }
+      } else {
+        if (up) {
+          var lastItem = this._wrapper.querySelector('ul.' + _c.call(this, 'choices') + ' > li:last-child');
+
+          if (lastItem != null) {
+            lastItem.className = _c.call(this, 'active');
+          }
+        } else {
+          var firstItem = this._wrapper.querySelector('ul.' + _c.call(this, 'choices') + ' > li:first-child');
+
+          if (firstItem != null) {
+            firstItem.className = _c.call(this, 'active');
+          }
+        }
+      }
+
+      e.preventDefault();
+    }
+  };
+
+  /**
    * Add binding keys
    */
   function _addBindingKeys (targetObject) {
@@ -830,7 +875,36 @@
     editableDiv.onkeypress = function (e) {
       _handleHintArea.call(self, e);
       _handleActivatorKey.call(self, e);
+    };
 
+    editableDiv.onkeydown = function (e) {
+      if (e.keyCode == 38) {
+        //up
+        _selectChoice.call(self, e, true);
+      }
+
+      if (e.keyCode == 40) {
+        //down
+        _selectChoice.call(self, e, false);
+      }
+
+      if (e.keyCode == 13) {
+        //enter
+        if (self._currentMode == self._modes.insert) {
+          //now we should select an item
+          var currentAnchor = self._wrapper.querySelector('li.' + _c.call(self, 'active') + ' a');
+
+          var itemObject = {};
+          itemObject[self._currentActivator.displayKey] = currentAnchor.getAttribute('data-display');
+          itemObject[self._currentActivator.valueKey] = currentAnchor.getAttribute('data-value');
+
+          //clear the hint first
+          _clearHint.call(self);
+          _setChoice.call(self, itemObject);
+        }
+
+        e.preventDefault();
+      }
     };
 
     editableDiv.onkeyup = function (e) {
@@ -851,16 +925,6 @@
 
         //check and see if the hint element is empty
         _handleEmptyHintElement.call(self);
-      }
-
-      if (e.keyCode == 38) {
-        //up
-
-      }
-
-      if (e.keyCode == 40) {
-        //down
-
       }
 
       if (e.keyCode == 37 || e.keyCode == 39) {
@@ -913,7 +977,7 @@
   };
 
   /**
-   * REMOTE SOURCE OF OTOBOX
+   * Remote XHR resource
    */
   function _xhrSource (activator, stack, options, fn) {
     var result = [];
