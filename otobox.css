@@ -19,6 +19,17 @@ ul.otobox-choices {
     font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif;
     font-size: 12px;
 }
+.otobox-input-target {
+    white-space: nowrap;
+    overflow: hidden;
+}
+.otobox-input-target br {
+    display:none;
+}
+.otobox-input-target * {
+    display:inline;
+    white-space:nowrap;
+}
 /**
  * Thanks to http://stackoverflow.com/a/18368720/375966
  */

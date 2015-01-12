@@ -96,6 +96,10 @@
     var wrapperDiv = this._wrapper = document.createElement('div');
     wrapperDiv.className = _c.call(this, 'wrapper');
 
+    if (targetObject.className != '') {
+      wrapperDiv.className = ' ' + targetObject.className;
+    }
+
     //append wrapper right before the target object
     targetObject.parentNode.insertBefore(wrapperDiv, targetObject);
 
@@ -112,7 +116,10 @@
 
     //if it's textarea
     if (targetObject.nodeName.toLowerCase() == 'textarea') {
+      editableDiv.className += ' ' + _c.call(this, 'textarea-target');
       editableDiv.style.height = targetObjectSize.height + 'px';
+    } else {
+      editableDiv.className += ' ' + _c.call(this, 'input-target');
     }
 
     wrapperDiv.appendChild(editableDiv);
@@ -696,12 +703,12 @@
           textNodeContent = '\u00A0';
         } else {
           //other parts of the choice element
-          var beforeStr = choiceElement.innerText.substr(0, startOffset);
+          var beforeStr = choiceElement.innerText.substr(0, startOffset).trim();
           var afterStr = choiceElement.innerText.substr(startOffset, choiceElement.innerText.length);
           isSpaceBetween = true;
 
           //first alter the content of the choice link
-          choiceElement.innerText = beforeStr;
+          choiceElement.innerText = beforeStr.trim();
           textNodeContent = '\u00A0' + afterStr;
         }
 
@@ -807,10 +814,13 @@
     editableDiv.onkeypress = function (e) {
       _handleHintArea.call(self, e);
       _handleActivatorKey.call(self, e);
-      _handleChoiceChange.call(self, e);
+
     };
 
     editableDiv.onkeyup = function (e) {
+      //check if the user is changing the choice element
+      _handleChoiceChange.call(self, e);
+
       //set value to target element
       _setTargetObjectValue.call(self, editableDiv.innerText);
 
@@ -825,9 +835,6 @@
 
         //check and see if the hint element is empty
         _handleEmptyHintElement.call(self);
-
-        //check if the user is changing the choice element
-        _handleChoiceChange.call(self, e);
       }
 
       if (e.keyCode == 37 || e.keyCode == 39) {
