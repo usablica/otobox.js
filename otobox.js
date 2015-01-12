@@ -359,6 +359,7 @@
 
     _changeMode.call(this, this._modes.normal);
     _toggleChoiceListState.call(this, false);
+    _setTargetObjectValue.call(this, editableDiv.textContent);
   };
 
   /**
@@ -468,7 +469,6 @@
       selectedRange.removeAllRanges();
       selectedRange.addRange(createdRange);
     }
-
   };
 
   /**
@@ -904,8 +904,9 @@
     r.open("POST", activator.source, true);
     r.onreadystatechange = function () {
       if (r.readyState != 4 || r.status != 200) {
-        return
-      };
+        return;
+      }
+
       var items = JSON.parse(r.responseText);
 
       for (var i = 0; i < items.length; i++) {
@@ -913,11 +914,12 @@
         itemObject[options.displayKey] = items[i].username;
         result.push(itemObject);
         itemObject = {};
-      };
+      }
+
       fn.call(this, result);
     };
-    r.send("name=" + stack);
 
+    r.send("name=" + stack);
   };
 
   /* constructor */
