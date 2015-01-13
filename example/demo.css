@@ -1,0 +1,37 @@
+body, html {
+    margin: 0;
+    padding: 0;
+}
+.wrapper {
+    width: 900px;
+    font-family: 'helvetica neue',helvetica,arial,sans-serif;
+    font-size: 14px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 50px;
+}
+.intro {
+    text-align: center;
+    margin-bottom: 50px;
+}
+.intro span {
+    background-color: #E5E5E5;
+    padding: 12px;
+    border-radius: 5px;
+}
+.otoboxInput, .otoboxTextarea {
+    width: 300px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.content-table {
+    width: 482px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.content-table ul {
+    list-style: none;
+}
+.content-table ul li {
+    padding-bottom: 5px;
+}
