@@ -16,7 +16,6 @@ ul.otobox-choices {
 }
 .otobox-wrapper .otobox-editableDiv {
     width: 100%;
-    height: 100%;
     line-height: 20px;
     border: 2px solid #D5D5D5;
     border-radius: 5px;
@@ -25,6 +24,9 @@ ul.otobox-choices {
     font-family: 'helvetica neue',helvetica,arial,sans-serif;
     font-size: 12px;
     box-sizing: border-box;
+}
+.otobox-wrapper .otobox-editableDiv.otobox-textarea-target {
+    height: 100%;
 }
 .otobox-input-target {
     white-space: nowrap;

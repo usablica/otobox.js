@@ -156,10 +156,14 @@
    * }
    */
   function _addActivator (activatorObject) {
-    if (activatorObject != null ) {
+    if (activatorObject != null) {
       if (typeof (activatorObject.key) != 'undefined' && typeof (activatorObject.source) != 'undefined' && typeof (activatorObject.name) != 'undefined') {
         //check allowed chars regex
         activatorObject.allowedChars = _normalizeActivatorAllowedCharsRegExp.call(this, activatorObject);
+
+        //save the activator key because we are changing the `key` property
+        //this tempKey is used for the `setChoiceManually` function. Maybe we should use a better approach here
+        activatorObject.tempKey = activatorObject.key;
 
         //normalize activator key regex
         activatorObject.key = _normalizeActivatorKeyRegExp.call(this, activatorObject);
@@ -370,6 +374,18 @@
   };
 
   /**
+   * Manually set a choice
+   */
+  function _setChoiceManually (activatorName, item) {
+    var editableDiv = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv'));
+    var activator = _getActivator.call(this, activatorName);
+
+    //generate the choice link
+    var choiceLink = _generateChoiceElement.call(this, activator.tempKey, item[activator.valueKey], item[activator.displayKey], activator);
+    editableDiv.appendChild(choiceLink);
+  };
+
+  /**
    * Fill choices list with the corresponding source
    */
   function _fillChoicesList (source) {
@@ -412,7 +428,6 @@
 
             ulWrapper.appendChild(li);
           }
-
 
         } else {
           var li = document.createElement('li');
@@ -1054,6 +1069,10 @@
     },
     addActivator: function (activatorObject) {
       _addActivator.call(this, activatorObject);
+      return this;
+    },
+    addChoice: function (activatorName, item) {
+      _setChoiceManually.call(this, activatorName, item);
       return this;
     },
     arraySource: _arraySource,
