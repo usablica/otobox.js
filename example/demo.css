@@ -19,7 +19,7 @@ body, html {
     padding: 12px;
     border-radius: 5px;
 }
-.otoboxInput {
+.otoboxInput, .otoboxTextarea {
     width: 300px;
     margin-left: auto;
     margin-right: auto;

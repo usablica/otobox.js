@@ -826,13 +826,16 @@
   function _updateStack () {
     if (this._currentMode == this._modes.insert) {
       var hintElement = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv') + ' .' + _c.call(this, 'hint'));
-      var activatorName = hintElement.getAttribute('data-activator');
-      var activator = _getActivator.call(this, activatorName);
 
-      if (activator.includeKey) {
-        this._stack = hintElement.textContent.substr(1, hintElement.textContent.length);
-      } else {
-        this._stack = hintElement.textContent;
+      if (hintElement != null) {
+        var activatorName = hintElement.getAttribute('data-activator');
+        var activator = _getActivator.call(this, activatorName);
+
+        if (activator.includeKey) {
+          this._stack = hintElement.textContent.substr(1, hintElement.textContent.length);
+        } else {
+          this._stack = hintElement.textContent;
+        }
       }
     }
   };
