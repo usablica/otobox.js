@@ -97,7 +97,7 @@
     wrapperDiv.className = _c.call(this, 'wrapper');
 
     if (targetObject.className != '') {
-      wrapperDiv.className = ' ' + targetObject.className;
+      wrapperDiv.className += ' ' + targetObject.className;
     }
 
     //append wrapper right before the target object
@@ -370,10 +370,15 @@
   function _fillChoicesList (source) {
     var self = this;
 
-    //clear items first
-    _clearChoicesList.call(this);
+    //add loading to the container
+    if (!/loading/.test(this._wrapper.className)) {
+      this._wrapper.className += ' ' + _c.call(this, 'loading');
+    }
 
     source.call(this, this._currentActivator, this._stack, this._options, function (result) {
+      //clear items first
+      _clearChoicesList.call(self);
+
       if (typeof (result) == 'object' && result instanceof Array) {
         var ulWrapper = self._wrapper.querySelector('ul.' + _c.call(self, 'choices'));
 
@@ -402,9 +407,13 @@
 
             ulWrapper.appendChild(li);
           }
+
+          //remove loading class
+          self._wrapper.className = self._wrapper.className.replace(new RegExp(_c.call(self, 'loading')), '').trim();
         } else {
           var li = document.createElement('li');
           var span = document.createElement('span');
+          span.className = _c.call(self, 'empty');
           span.textContent = 'No result';
           li.appendChild(span);
 
@@ -966,8 +975,8 @@
       if (new RegExp(stack, 'gi').test(item)) {
         var itemObject = {};
 
-        itemObject[options.displayKey] = item;
-        itemObject[options.valueKey]   = item;
+        itemObject[activator.displayKey] = item;
+        itemObject[activator.valueKey]   = item;
 
         result.push(itemObject);
       }
@@ -981,10 +990,9 @@
    */
   function _xhrSource (activator, stack, options, fn) {
     var result = [];
-    var itemObject = {};
 
     var r = new XMLHttpRequest();
-    r.open("POST", activator.source, true);
+    r.open("GET", activator.source, true);
     r.onreadystatechange = function () {
       if (r.readyState != 4 || r.status != 200) {
         return;
@@ -993,16 +1001,17 @@
       var items = JSON.parse(r.responseText);
 
       for (var i = 0; i < items.length; i++) {
-        itemObject[options.displayKey] = items[i].displayName;
-        itemObject[options.displayKey] = items[i].username;
+        var itemObject = {};
+
+        itemObject[activator.displayKey] = items[i].displayName;
+        itemObject[activator.valueKey]   = items[i].username;
         result.push(itemObject);
-        itemObject = {};
       }
 
       fn.call(this, result);
     };
 
-    r.send("name=" + stack);
+    r.send("q=" + stack);
   };
 
   /* constructor */

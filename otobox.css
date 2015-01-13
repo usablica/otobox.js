@@ -48,6 +48,15 @@ ul.otobox-choices {
     overflow: hidden;
     border: solid 2px #D5D5D5;
 }
+.otobox-wrapper .otobox-choices .otobox-empty {
+    display: block;
+    background-color: #F3F5F5;
+    padding: 5px;
+    color: #666;
+    line-height: 24px;
+    font-weight: bold;
+    text-align: center;
+}
 .otobox-wrapper .otobox-choices a {
     display: block;
     background-color: #F3F5F5;
