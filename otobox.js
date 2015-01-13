@@ -131,6 +131,11 @@
     ulWrapper.className = _c.call(this, 'choices');
     wrapperDiv.appendChild(ulWrapper);
 
+    //loading element
+    var loadingElement = document.createElement("div");
+    loadingElement.className = _c.call(this, 'loadingElement');
+    wrapperDiv.appendChild(loadingElement);
+
     //bind keys to the target object
     _addBindingKeys.call(this, targetObject);
   };
@@ -408,8 +413,7 @@
             ulWrapper.appendChild(li);
           }
 
-          //remove loading class
-          self._wrapper.className = self._wrapper.className.replace(new RegExp(_c.call(self, 'loading')), '').trim();
+
         } else {
           var li = document.createElement('li');
           var span = document.createElement('span');
@@ -422,6 +426,9 @@
       } else {
         _error.call(self, 'Source returned bad data type.');
       }
+
+      //remove loading class
+      self._wrapper.className = self._wrapper.className.replace(new RegExp(_c.call(self, 'loading')), '').trim();
     });
   };
 
@@ -817,7 +824,6 @@
    * Update and set the new stack value according to the hint element
    */
   function _updateStack () {
-
     if (this._currentMode == this._modes.insert) {
       var hintElement = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv') + ' .' + _c.call(this, 'hint'));
       var activatorName = hintElement.getAttribute('data-activator');
