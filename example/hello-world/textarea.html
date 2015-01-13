@@ -1,0 +1,22 @@
+<html>
+    <head>
+        <title>Textarea</title>
+        <script src='../../otobox.js' type="text/javascript"></script>
+        <link rel="stylesheet" type="text/css" href='../../otobox.css'>
+    </head>
+
+    <body>
+    <textarea type="text" name="otobox" id="otobox">Start typing...</textarea>
+
+      <script>
+        var s1 = new otobox('#otobox');
+        s1.addActivator({
+            name: 'mention.array',
+            key: '@',
+            customChoice: true,
+            allowedChars: /[a-zA-Z0-9]+/,
+            source: ['afshin', 'ali', 'ahmad']
+        });
+      </script>
+    </body>
+</html>
