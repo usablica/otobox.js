@@ -11,7 +11,7 @@
     // Browser globals
     root.otobox = factory();
   }
-}(this, function () {
+} (this, function () {
 
   /**
    * To init basic settings and variables
@@ -898,6 +898,28 @@
   };
 
   /**
+   * Get all choices and categorize them with activator
+   */
+  function _getChoices () {
+    var editableDiv = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv'));
+    var choices = editableDiv.querySelectorAll('a.' + _c.call(this, 'choiceItem'));
+    var result = [];
+
+    for (var i = 0; i < choices.length; i++) {
+      var choice = choices[i];
+
+      result.push({
+        activatorName: choice.getAttribute('data-activator'),
+        display: choice.getAttribute('data-display'),
+        activatorKey: choice.getAttribute('data-key'),
+        value: choice.getAttribute('data-value')
+      });
+    }
+
+    return result;
+  };
+
+  /**
    * Add binding keys
    */
   function _addBindingKeys (targetObject) {
@@ -934,9 +956,14 @@
           //clear the hint first
           _clearHint.call(self);
           _setChoice.call(self, itemObject);
+
+          e.preventDefault();
         }
 
-        e.preventDefault();
+        //we dont have enter in `input` type elements
+        if (self._targetObject.nodeName.toLowerCase() == 'input') {
+          e.preventDefault();
+        }
       }
     };
 
@@ -976,6 +1003,10 @@
         //escape
         _changeMode.call(self, self._modes.normal);
         _toggleChoiceListState.call(self, false);
+
+        //stop bubbling event
+        e.stopPropagation();
+        e.preventDefault();
       }
     };
   };
@@ -1000,7 +1031,7 @@
     for (var attrname in obj1) { obj3[attrname] = obj1[attrname]; }
     for (var attrname in obj2) { obj3[attrname] = obj2[attrname]; }
     return obj3;
-  }
+  };
 
   /**
    * Default sources of otobox
@@ -1074,6 +1105,9 @@
     addChoice: function (activatorName, item) {
       _setChoiceManually.call(this, activatorName, item);
       return this;
+    },
+    getChoices: function () {
+      return _getChoices.call(this);
     },
     arraySource: _arraySource,
     xhrSource: _xhrSource

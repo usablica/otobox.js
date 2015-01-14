@@ -53,6 +53,10 @@ ul.otobox-choices {
     border-radius: 0 0 4px 4px;
     overflow: hidden;
     border: solid 2px #D5D5D5;
+    position: relative;
+    width: 100%;
+    z-index: 10000;
+    box-sizing: border-box;
 }
 .otobox-wrapper .otobox-choices .otobox-empty {
     display: block;
