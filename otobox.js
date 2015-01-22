@@ -11,7 +11,7 @@
     // Browser globals
     root.otobox = factory();
   }
-} (this, function () {
+}(this, function () {
 
   /**
    * To init basic settings and variables
@@ -21,11 +21,15 @@
      * Default options
      */
     this._options = {
-      /* Display and value keys */
-      displayKey: 'name',
+      /* value key */
       valueKey: 'value',
       /* CSS classes and IDs prefix */
-      namingPrefix: 'otobox-'
+      namingPrefix: 'otobox-',
+      /* Default templates */
+      templates: {
+        suggestion: '<a href="javascript:void(0);" data-value="{{otobox_value}}">{{display}}</a>',
+        choice: '<a data-value="{{otobox_value}}" data-key="{{otobox_key}}" data-activator="{{otobox_activator}}" data-choice="true" class="otobox-choiceItem">{{otobox_key}}{{display}}</a>'
+      }
     };
 
     //an empty list for activators
@@ -53,6 +57,9 @@
 
     //wrapper
     this._wrapper = null;
+
+    //to collect current filtered results
+    this._sourceResult = null;
 
     //ok lets find the target object according to the given parameters
     var targetObject = null;
@@ -150,7 +157,6 @@
    *   key: /./,
    *   source: 'http://example.com/boo.json',
    *   allowedChars: /[a-zA-Z]+/,
-   *   displayKey: 'name',
    *   valueKey: 'value',
    *   mode: 'select'
    * }
@@ -171,12 +177,13 @@
         //can user enter a custom choice?
         activatorObject.customChoice = !!activatorObject.customChoice;
 
-        //check and set correct display and value keys
-        activatorObject.displayKey = activatorObject.displayKey || this._options.displayKey;
-        activatorObject.valueKey   = activatorObject.valueKey   || this._options.valueKey;
+        //check and set correct value key
+        activatorObject.valueKey   = activatorObject.valueKey || this._options.valueKey;
 
-        //include activator key in display or not
-        activatorObject.includeKey = typeof (activatorObject.includeKey) != 'undefined' ? !!activatorObject.includeKey : true;
+        //set templates
+        if (typeof (activatorObject.templates) != 'object') {
+          activatorObject.templates = this._options.templates;
+        }
 
         this._activators.push(activatorObject);
       } else {
@@ -322,25 +329,18 @@
   /**
    * Generate choice element
    */
-  function _generateChoiceElement (activatorKey, value, display, activator) {
-    var choiceLink = document.createElement('a');
-    choiceLink.className = _c.call(this, 'choiceItem');
-    _setChoiceElementAttrs.call(this, choiceLink, activatorKey, value, display, activator);
+  function _generateChoiceElement (activatorKey, item, activator) {
 
-    return choiceLink;
-  };
+    //fist of all, fill 'data-*' attributes
+    var choiceElementTemplate = _format(activator.templates.choice, { otobox_key: activatorKey, otobox_activator: activator.name });
 
-  /**
-   * Append and set attributes to the choice element
-   */
-  function _setChoiceElementAttrs (choiceLink, activatorKey, value, display, activator) {
+    //then replace items that is related to
+    choiceElementTemplate = _format(choiceElementTemplate, item);
 
-    choiceLink.textContent = (activator.includeKey ? activatorKey : '') + display;
-
-    choiceLink.setAttribute('data-value', value);
-    choiceLink.setAttribute('data-display', display);
-    choiceLink.setAttribute('data-key', activatorKey);
-    choiceLink.setAttribute('data-activator', activator.name);
+    //convert string to dom
+    var tempDom = document.createElement('div');
+    tempDom.innerHTML = choiceElementTemplate;
+    return tempDom.firstChild;
   };
 
   /**
@@ -352,7 +352,7 @@
     var activator = this._currentActivator;
 
     if (selectedRange.focusNode == editableDiv || selectedRange.focusNode.nodeType == 3) {
-      var choiceLink = _generateChoiceElement.call(this, this._stackActivator, item[activator.valueKey], item[activator.displayKey], activator);
+      var choiceLink = _generateChoiceElement.call(this, this._stackActivator, item, activator);
 
       var textNode = document.createTextNode('\u00A0');
 
@@ -381,7 +381,7 @@
     var activator = _getActivator.call(this, activatorName);
 
     //generate the choice link
-    var choiceLink = _generateChoiceElement.call(this, activator.tempKey, item[activator.valueKey], item[activator.displayKey], activator);
+    var choiceLink = _generateChoiceElement.call(this, activator.tempKey, item, activator);
     editableDiv.appendChild(choiceLink);
   };
 
@@ -397,6 +397,11 @@
     }
 
     source.call(this, this._currentActivator, this._stack, this._options, function (result) {
+      var activator = self._currentActivator;
+
+      //set temp result array
+      self._sourceResult = result;
+
       //clear items first
       _clearChoicesList.call(self);
 
@@ -409,11 +414,12 @@
 
             var li = document.createElement('li');
 
-            var anchor = document.createElement('a');
-            anchor.href = 'javascript:void(0);';
-            anchor.setAttribute('data-value', resultItem[self._currentActivator.valueKey]);
-            anchor.setAttribute('data-display', resultItem[self._currentActivator.displayKey]);
-            anchor.textContent = resultItem[self._options.displayKey];
+            //get and parse choice template
+            var suggestionTemplate = _format(activator.templates.suggestion, resultItem);
+
+            var tempDom = document.createElement('div');
+            tempDom.innerHTML = suggestionTemplate;
+            var anchor = tempDom.firstChild;
 
             (function (resultItem) {
               anchor.onclick = function () {
@@ -604,21 +610,6 @@
           }
         }
       }
-
-      //and then check if the whole text can match with
-      //one of activators allowedchars. Please note that
-      //developers can set `includekey` to `false`.
-      for (var i = 0; i < this._activators.length; i++) {
-        var activator = this._activators[i];
-
-        if (!activator.includeKey && activator.allowedChars.test(text)) {
-          return {
-            activator: activator,
-            activatorKey: activatorKey,
-            hintText: hint
-          };
-        }
-      }
     }
 
     return null;
@@ -726,7 +717,7 @@
     //a flag to hold the state
     var isSpaceBetween = false;
 
-    if (this._currentMode == this._modes.normal && /choiceItem/.test(focusNode.parentNode.className)) {
+    if (this._currentMode == this._modes.normal && focusNode.parentNode.hasAttribute('data-choice')) {
       var choiceElement = focusNode.parentNode;
 
       //since we consider whitespace as a global separator character, we handle it
@@ -776,7 +767,9 @@
         var activatorParts = _isActivatorText.call(this, choiceElement.textContent);
 
         if (activatorParts != null) {
-          _setChoiceElementAttrs.call(this, choiceElement, activatorParts.activatorKey, activatorParts.hintText, activatorParts.hintText, activatorParts.activator);
+          //I'm not sure whether this is a good approach to update an attribute or not
+          //TODO: review this part
+          choiceElement.setAttribute('data-value', activatorParts.hintText);
         } else {
           var textElement = document.createTextNode(choiceElement.textContent);
 
@@ -846,11 +839,7 @@
         var activatorName = hintElement.getAttribute('data-activator');
         var activator = _getActivator.call(this, activatorName);
 
-        if (activator.includeKey) {
-          this._stack = hintElement.textContent.substr(1, hintElement.textContent.length);
-        } else {
-          this._stack = hintElement.textContent;
-        }
+        this._stack = hintElement.textContent;
       }
     }
   };
@@ -898,22 +887,36 @@
   };
 
   /**
-   * Get all choices and categorize them with activator
+   * Get item by value
+   */
+  function _getItem (value, activator) {
+    var arr = this._sourceResult;
+
+    for (var i = 0; i < arr.length; i++) {
+      var arrItem = arr[i];
+
+      if (arrItem[activator.valueKey] == value) {
+        return arrItem;
+      }
+    }
+  };
+
+  /**
+   * Get all available choices
    */
   function _getChoices () {
-    var editableDiv = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv'));
-    var choices = editableDiv.querySelectorAll('a.' + _c.call(this, 'choiceItem'));
-    var result = [];
+    var result = {};
+    var choices = this._wrapper.querySelectorAll('.' + _c.call(this, 'editableDiv') + ' a[data-choice]');
 
     for (var i = 0; i < choices.length; i++) {
-      var choice = choices[i];
+      var choiceItem = choices[i];
+      var activator = choiceItem.getAttribute('data-activator');
 
-      result.push({
-        activatorName: choice.getAttribute('data-activator'),
-        display: choice.getAttribute('data-display'),
-        activatorKey: choice.getAttribute('data-key'),
-        value: choice.getAttribute('data-value')
-      });
+      if (typeof (result[activator]) == 'undefined') {
+        result[activator] = [];
+      }
+
+      result[activator].push(choiceItem.getAttribute('data-value'));
     }
 
     return result;
@@ -949,9 +952,7 @@
           //now we should select an item
           var currentAnchor = self._wrapper.querySelector('li.' + _c.call(self, 'active') + ' a');
 
-          var itemObject = {};
-          itemObject[self._currentActivator.displayKey] = currentAnchor.getAttribute('data-display');
-          itemObject[self._currentActivator.valueKey] = currentAnchor.getAttribute('data-value');
+          var itemObject = _getItem.call(self, currentAnchor.getAttribute('data-value'), self._currentActivator);
 
           //clear the hint first
           _clearHint.call(self);
@@ -1031,6 +1032,31 @@
     for (var attrname in obj1) { obj3[attrname] = obj1[attrname]; }
     for (var attrname in obj2) { obj3[attrname] = obj2[attrname]; }
     return obj3;
+  }
+
+  /**
+   * Format string
+   *
+   * Thanks to http://stackoverflow.com/a/4673436/375966
+   */
+  function _format (str, obj) {
+    return str.replace(/{{(\w+)}}/g, function (match, item) {
+      return typeof obj[item] != 'undefined' ? obj[item] : match;
+    });
+  };
+
+  /**
+   * Populate and add additional properties to the source's result
+   */
+  function _populateList (result, activator) {
+    for (var i = 0; i < result.length; i++) {
+      var resultItem = result[i];
+
+      //add value. we use this property for templates
+      resultItem['otobox_value'] = resultItem[activator.valueKey];
+    }
+
+    return result;
   };
 
   /**
@@ -1044,15 +1070,14 @@
 
       if (new RegExp(stack, 'gi').test(item)) {
         var itemObject = {};
-
-        itemObject[activator.displayKey] = item;
-        itemObject[activator.valueKey]   = item;
+        itemObject['value']   = item;
+        itemObject['display'] = item;
 
         result.push(itemObject);
       }
     }
 
-    fn.call(this, result);
+    fn.call(this, _populateList.call(this, result, activator));
   };
 
   /**
@@ -1060,9 +1085,10 @@
    */
   function _xhrSource (activator, stack, options, fn) {
     var result = [];
+    var self = this;
 
     var r = new XMLHttpRequest();
-    r.open("GET", activator.source, true);
+    r.open("GET", _format(activator.source, { keyword: stack }), true);
     r.onreadystatechange = function () {
       if (r.readyState != 4 || r.status != 200) {
         return;
@@ -1070,18 +1096,14 @@
 
       var items = JSON.parse(r.responseText);
 
-      for (var i = 0; i < items.length; i++) {
-        var itemObject = {};
-
-        itemObject[activator.displayKey] = items[i].displayName;
-        itemObject[activator.valueKey]   = items[i].username;
-        result.push(itemObject);
+      if (typeof (activator.postFetch) == 'function') {
+        items = activator.postFetch.call(self, items);
       }
 
-      fn.call(this, result);
+      fn.call(this, _populateList.call(this, items));
     };
 
-    r.send("q=" + stack);
+    r.send();
   };
 
   /* constructor */
