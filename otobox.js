@@ -838,8 +838,10 @@
       if (hintElement != null) {
         var activatorName = hintElement.getAttribute('data-activator');
         var activator = _getActivator.call(this, activatorName);
+        var activatorParts = _isActivatorText.call(this, hintElement.textContent);
 
-        this._stack = hintElement.textContent;
+        if (activatorParts != null)
+          this._stack = activatorParts.hintText;
       }
     }
   };
