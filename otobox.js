@@ -25,6 +25,8 @@
       valueKey: 'value',
       /* CSS classes and IDs prefix */
       namingPrefix: 'otobox-',
+      /* Should otobox update the target object with text or html? */
+      useText: true,
       /* Default templates */
       templates: {
         suggestion: '<a href="javascript:void(0);" data-value="{{otobox_value}}">{{display}}</a>',
@@ -323,7 +325,7 @@
       hintElement.parentNode.removeChild(hintElement);
     }
 
-    _setTargetObjectValue.call(this, editableDiv.textContent);
+    _setTargetObjectValue.call(this, this._options.useText ? editableDiv.textContent : editableDiv.innerHTML);
   };
 
   /**
@@ -377,7 +379,7 @@
 
     _changeMode.call(this, this._modes.normal);
     _toggleChoiceListState.call(this, false);
-    _setTargetObjectValue.call(this, editableDiv.textContent);
+    _setTargetObjectValue.call(this, this._options.useText ? editableDiv.textContent : editableDiv.innerHTML);
   };
 
   /**
@@ -1021,7 +1023,7 @@
       _handleChoiceChange.call(self, e);
 
       //set value to target element
-      _setTargetObjectValue.call(self, editableDiv.textContent);
+      _setTargetObjectValue.call(self, self._options.useText ? editableDiv.textContent : editableDiv.innerHTML);
 
       if (e.keyCode == 46 || e.keyCode == 8) {
         //delete or backspace
