@@ -25,9 +25,19 @@
             s1.addActivator({
                 name: 'mention.array',
                 key: '@',
-                customChoice: true,
                 allowedChars: /[a-zA-Z0-9]+/,
                 source: ['afshin', 'john', 'guillermo', 'tj', 'bob', 'arman', 'arch']
+            });
+            s1.addActivator({
+                name: 'tag.array',
+                key: '#',
+                allowedChars: /[a-zA-Z_]+/,
+                customChoice: true,
+                templates: {
+                    suggestion: '<a href="javascript:void(0);" data-value="{{otobox_value}}">{{otobox_value}}</a>',
+                    choice: '<a data-value="{{otobox_value}}" data-key="{{otobox_key}}" data-activator="{{otobox_activator}}" data-choice="" class="otobox-choiceItem">{{otobox_key}}{{otobox_value}}</a>'
+                },
+                source: ['tech', 'web', 'food', 'selfie', 'ebola']
             });
         </script>
     </body>

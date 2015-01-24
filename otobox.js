@@ -28,7 +28,7 @@
       /* Default templates */
       templates: {
         suggestion: '<a href="javascript:void(0);" data-value="{{otobox_value}}">{{display}}</a>',
-        choice: '<a data-value="{{otobox_value}}" data-key="{{otobox_key}}" data-activator="{{otobox_activator}}" data-choice="true" class="otobox-choiceItem">{{otobox_key}}{{display}}</a>'
+        choice: '<a data-value="{{otobox_value}}" data-key="{{otobox_key}}" data-activator="{{otobox_activator}}" data-choice="" class="otobox-choiceItem">{{otobox_key}}{{display}}</a>'
       }
     };
 
@@ -340,7 +340,14 @@
     //convert string to dom
     var tempDom = document.createElement('div');
     tempDom.innerHTML = choiceElementTemplate;
-    return tempDom.firstChild;
+    var choiceElement = tempDom.firstChild;
+
+    //we use this attribute to:
+    //1) create css queries to get choices
+    //2) compare the textContent in onkeyup and handleChoice function and detect changes in the choice
+    choiceElement.setAttribute('data-choice', choiceElement.textContent);
+
+    return choiceElement;
   };
 
   /**
@@ -477,12 +484,36 @@
       this._stackActivator = '';
       this._currentMode = this._modes.normal;
 
-      //also remove the hint box and convert it to text
-      _convertHintToText.call(this);
+      if (this._currentActivator != null) {
+        if (!this._currentActivator.customChoice) {
+          //remove the hint box and convert it to text
+          _convertHintToText.call(this);
+        } else {
+          _convertHintToChoice.call(this);
+        }
+      }
+
+      this._currentActivator = null;
     } else if (mode == this._modes.insert) {
       this._stack = '';
       this._stackActivator = '';
       this._currentMode = this._modes.insert;
+    }
+  };
+
+  /**
+   * Convert hint to the choice element
+   */
+  function _convertHintToChoice () {
+    var editableDiv = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv'));
+    var hintElement = editableDiv.querySelector('.' + _c.call(this, 'hint'));
+
+    if (hintElement != null) {
+      var activatorParts = _isActivatorText.call(this, hintElement.textContent);
+      var choiceElement = _generateChoiceElement.call(this, activatorParts.activatorKey, { otobox_value: activatorParts.hintText }, activatorParts.activator);
+
+      hintElement.parentNode.insertBefore(choiceElement, hintElement);
+      hintElement.parentNode.removeChild(hintElement);
     }
   };
 
@@ -661,7 +692,7 @@
         var prevElement = hintElement.previousSibling;
 
         if (prevElement.nodeType == 3) {
-          prevElement.textContent = '';
+          prevElement.textContent = prevElement.textContent.replace(this._stackActivator + this._stack, '');
         }
       }
     }
@@ -675,7 +706,8 @@
     var activatorObject = _isActivatorKey.call(this, String.fromCharCode(e.which), targetObject);
     var focusNode = document.getSelection().focusNode;
 
-    if (this._currentMode == this._modes.normal && activatorObject != null) {
+    //there should be an space before the choice element
+    if (this._currentMode == this._modes.normal && activatorObject != null && /\s/.test(focusNode.textContent[document.getSelection().focusOffset - 1])) {
       //set correct mode and current activator
       _changeMode.call(this, this._modes.insert);
       this._currentActivator = activatorObject;
@@ -712,12 +744,12 @@
    */
   function _handleChoiceChange (e) {
     var focusNode = document.getSelection().focusNode;
-    var activator = this._currentActivator;
 
     //a flag to hold the state
     var isSpaceBetween = false;
 
-    if (this._currentMode == this._modes.normal && focusNode.parentNode.hasAttribute('data-choice')) {
+    //so this is a choice element
+    if (this._currentMode == this._modes.normal && focusNode != null && focusNode.parentNode.hasAttribute('data-choice')) {
       var choiceElement = focusNode.parentNode;
 
       //since we consider whitespace as a global separator character, we handle it
@@ -759,6 +791,8 @@
         choiceElement.textContent = choiceElement.textContent.trim();
       }
 
+      var activator = _getActivator.call(this, choiceElement.getAttribute('data-activator'));
+
       //it seems user is changing the choice content
       if (activator.customChoice) {
 
@@ -770,32 +804,44 @@
           //I'm not sure whether this is a good approach to update an attribute or not
           //TODO: review this part
           choiceElement.setAttribute('data-value', activatorParts.hintText);
-        } else {
-          var textElement = document.createTextNode(choiceElement.textContent);
-
-          choiceElement.parentNode.insertBefore(textElement, choiceElement);
-          choiceElement.parentNode.removeChild(choiceElement);
         }
 
       } else {
-        var selectedRange = document.getSelection();
-        var startOffset = selectedRange.getRangeAt(0).startOffset;
-        var createdRange = document.createRange();
+        if (choiceElement.getAttribute('data-choice') != choiceElement.textContent) {
+          var selectedRange = document.getSelection();
+          var startOffset = selectedRange.getRangeAt(0).startOffset;
+          var createdRange = document.createRange();
 
-        //in this part we should remove the choice element and convert it to text
-        var textElement = document.createTextNode(choiceElement.textContent);
+          //in this part we should remove the choice element and convert it to text
+          var textElement = document.createTextNode(choiceElement.textContent);
+
+          //add the text element and remove the hint element
+          choiceElement.parentNode.insertBefore(textElement, choiceElement);
+          choiceElement.parentNode.removeChild(choiceElement);
+
+          if (!isSpaceBetween) {
+            createdRange.setStart(textElement, startOffset);
+            createdRange.collapse(true);
+
+            selectedRange.removeAllRanges();
+            selectedRange.addRange(createdRange);
+          }
+        }
+      }
+    }
+
+    //then check all choices and cleanup those that doesn't in a correct format
+    var choices = this._wrapper.querySelectorAll('*[data-choice]');
+
+    for (var i = 0; i < choices.length; i++) {
+      var choice = choices[i];
+
+      if (!_isActivatorText.call(this, choice.textContent)) {
+        var textElement = document.createTextNode(choice.textContent);
 
         //add the text element and remove the hint element
-        choiceElement.parentNode.insertBefore(textElement, choiceElement);
-        choiceElement.parentNode.removeChild(choiceElement);
-
-        if (!isSpaceBetween) {
-          createdRange.setStart(textElement, startOffset);
-          createdRange.collapse(true);
-
-          selectedRange.removeAllRanges();
-          selectedRange.addRange(createdRange);
-        }
+        choice.parentNode.insertBefore(textElement, choice);
+        choice.parentNode.removeChild(choice);
       }
     }
   };
@@ -908,7 +954,7 @@
    */
   function _getChoices () {
     var result = {};
-    var choices = this._wrapper.querySelectorAll('.' + _c.call(this, 'editableDiv') + ' a[data-choice]');
+    var choices = this._wrapper.querySelectorAll('.' + _c.call(this, 'editableDiv') + ' *[data-choice]');
 
     for (var i = 0; i < choices.length; i++) {
       var choiceItem = choices[i];
@@ -1102,7 +1148,7 @@
         items = activator.postFetch.call(self, items);
       }
 
-      fn.call(this, _populateList.call(this, items));
+      fn.call(self, _populateList.call(self, items, activator));
     };
 
     r.send();
