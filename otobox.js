@@ -360,22 +360,20 @@
     var selectedRange = document.getSelection();
     var activator = this._currentActivator;
 
-    if (selectedRange.focusNode == editableDiv || selectedRange.focusNode.nodeType == 3) {
-      var choiceLink = _generateChoiceElement.call(this, this._stackActivator, item, activator);
+    var choiceLink = _generateChoiceElement.call(this, this._stackActivator, item, activator);
 
-      var textNode = document.createTextNode('\u00A0');
+    var textNode = document.createTextNode('\u00A0');
 
-      selectedRange.getRangeAt(0).insertNode(textNode);
-      selectedRange.getRangeAt(0).insertNode(choiceLink);
+    selectedRange.getRangeAt(0).insertNode(textNode);
+    selectedRange.getRangeAt(0).insertNode(choiceLink);
 
-      //TODO: compatible it with older version of IE
-      var createdRange = document.createRange();
-      createdRange.setStart(textNode, 1);
-      createdRange.collapse(true);
+    //TODO: compatible it with older version of IE
+    var createdRange = document.createRange();
+    createdRange.setStart(textNode, 1);
+    createdRange.collapse(true);
 
-      selectedRange.removeAllRanges();
-      selectedRange.addRange(createdRange);
-    }
+    selectedRange.removeAllRanges();
+    selectedRange.addRange(createdRange);
 
     _changeMode.call(this, this._modes.normal);
     _toggleChoiceListState.call(this, false);
@@ -747,9 +745,6 @@
   function _handleChoiceChange (e) {
     var focusNode = document.getSelection().focusNode;
 
-    //a flag to hold the state
-    var isSpaceBetween = false;
-
     //so this is a choice element
     if (this._currentMode == this._modes.normal && focusNode != null && focusNode.parentNode.hasAttribute('data-choice')) {
       var choiceElement = focusNode.parentNode;
@@ -762,15 +757,14 @@
         var startOffset = selectionRange.startOffset;
 
         var textNodeContent = '';
-        //we are at the end of the choice element
 
+        //we are at the end of the choice element
         if (choiceElement.textContent.length == startOffset) {
           textNodeContent = '\u00A0';
         } else {
           //other parts of the choice element
           var beforeStr = choiceElement.textContent.substr(0, startOffset).trim();
           var afterStr = choiceElement.textContent.substr(startOffset, choiceElement.textContent.length);
-          isSpaceBetween = true;
 
           //first alter the content of the choice link
           choiceElement.textContent = beforeStr;
@@ -797,7 +791,6 @@
 
       //it seems user is changing the choice content
       if (activator.customChoice) {
-
         //its okay if user change the content of the choice
         //we will alter attributes for the choice as well
         var activatorParts = _isActivatorText.call(this, choiceElement.textContent);
@@ -806,28 +799,7 @@
           //I'm not sure whether this is a good approach to update an attribute or not
           //TODO: review this part
           choiceElement.setAttribute('data-value', activatorParts.hintText);
-        }
-
-      } else {
-        if (choiceElement.getAttribute('data-choice') != choiceElement.textContent) {
-          var selectedRange = document.getSelection();
-          var startOffset = selectedRange.getRangeAt(0).startOffset;
-          var createdRange = document.createRange();
-
-          //in this part we should remove the choice element and convert it to text
-          var textElement = document.createTextNode(choiceElement.textContent);
-
-          //add the text element and remove the hint element
-          choiceElement.parentNode.insertBefore(textElement, choiceElement);
-          choiceElement.parentNode.removeChild(choiceElement);
-
-          if (!isSpaceBetween) {
-            createdRange.setStart(textElement, startOffset);
-            createdRange.collapse(true);
-
-            selectedRange.removeAllRanges();
-            selectedRange.addRange(createdRange);
-          }
+          choiceElement.setAttribute('data-choice', activatorParts.activatorKey + activatorParts.hintText);
         }
       }
     }
@@ -837,13 +809,25 @@
 
     for (var i = 0; i < choices.length; i++) {
       var choice = choices[i];
+      var activator = _getActivator.call(this, choice.getAttribute('data-activator'));
 
-      if (!_isActivatorText.call(this, choice.textContent)) {
+      if (!_isActivatorText.call(this, choice.textContent) || (!activator.customChoice && choice.getAttribute('data-choice') != choice.textContent)) {
         var textElement = document.createTextNode(choice.textContent);
+        var selectedRange = document.getSelection();
+        var startOffset = selectedRange.getRangeAt(0).startOffset;
+        var createdRange = document.createRange();
 
         //add the text element and remove the hint element
         choice.parentNode.insertBefore(textElement, choice);
         choice.parentNode.removeChild(choice);
+
+        if (!/\s/.test(String.fromCharCode(e.which)) && textElement.textContent.length >= startOffset) {
+          createdRange.setStart(textElement, startOffset);
+          createdRange.collapse(true);
+
+          selectedRange.removeAllRanges();
+          selectedRange.addRange(createdRange);
+        }
       }
     }
   };

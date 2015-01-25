@@ -25,13 +25,13 @@
             s1.addActivator({
                 name: 'mention.array',
                 key: '@',
-                allowedChars: /[a-zA-Z0-9]+/,
+                allowedChars: /^[a-zA-Z0-9]+$/,
                 source: ['afshin', 'john', 'guillermo', 'tj', 'bob', 'arman', 'arch']
             });
             s1.addActivator({
                 name: 'tag.array',
                 key: '#',
-                allowedChars: /[a-zA-Z_]+/,
+                allowedChars: /^[a-zA-Z_]+$/,
                 customChoice: true,
                 templates: {
                     suggestion: '<a href="javascript:void(0);" data-value="{{otobox_value}}">{{otobox_value}}</a>',
