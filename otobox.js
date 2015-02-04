@@ -63,6 +63,9 @@
     //to collect current filtered results
     this._sourceResult = null;
 
+    //custom events
+    this._events = {};
+
     //ok lets find the target object according to the given parameters
     var targetObject = null;
     if (typeof (selector) == 'object') {
@@ -118,6 +121,7 @@
 
     //div for editing
     var editableDiv = document.createElement('div');
+    editableDiv.setAttribute('name', _c.call(this, 'editableDiv'));
     editableDiv.setAttribute('contenteditable', true);
     editableDiv.setAttribute('data-placeholder', targetObject.placeholder);
     editableDiv.className = _c.call(this, 'editableDiv');
@@ -397,6 +401,11 @@
    */
   function _fillChoicesList (source) {
     var self = this;
+
+    //don't call the source when stack is empty
+    if (this._stack == '') {
+      return;
+    }
 
     //add loading to the container
     if (!/loading/.test(this._wrapper.className)) {
@@ -993,13 +1002,18 @@
           _setChoice.call(self, itemObject);
 
           e.preventDefault();
+          return false;
         }
 
-        //we dont have enter in `input` type elements
+        //we don't have enter in `input` type elements
         if (self._targetObject.nodeName.toLowerCase() == 'input') {
           e.preventDefault();
+          return false;
         }
       }
+
+      //trigger `update` event
+      _trigger.call(self, 'update', [self, e]);
     };
 
     editableDiv.onkeyup = function (e) {
@@ -1094,6 +1108,28 @@
   };
 
   /**
+   * Bind an event
+   */
+  function _bind (name, fn) {
+    if (typeof (this._events[name]) == 'undefined') {
+      this._events[name] = [];
+    }
+
+    this._events[name].push(fn);
+  };
+
+  /**
+   * Trigger an event
+   */
+  function _trigger (name, args) {
+    if (typeof (this._events[name]) != 'undefined') {
+      for (var i = 0; i < this._events[name].length; i++) {
+        this._events[name][i].apply(this, args);
+      }
+    }
+  };
+
+  /**
    * Default sources of otobox
    */
   function _arraySource (activator, stack, options, fn) {
@@ -1164,6 +1200,14 @@
     },
     getChoices: function () {
       return _getChoices.call(this);
+    },
+    bind: function (name, fn) {
+      _bind.call(this, name, fn);
+      return this;
+    },
+    trigger: function (name, args) {
+      _trigger.call(this, name, args);
+      return this;
     },
     arraySource: _arraySource,
     xhrSource: _xhrSource
