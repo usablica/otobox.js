@@ -415,53 +415,56 @@
     source.call(this, this._currentActivator, this._stack, this._options, function (result) {
       var activator = self._currentActivator;
 
-      //set temp result array
-      self._sourceResult = result;
+      if (activator != null) {
+        //set temp result array
+        self._sourceResult = result;
 
-      //clear items first
-      _clearChoicesList.call(self);
+        //clear items first
+        _clearChoicesList.call(self);
 
-      if (typeof (result) == 'object' && result instanceof Array) {
-        var ulWrapper = self._wrapper.querySelector('ul.' + _c.call(self, 'choices'));
+        if (typeof (result) == 'object' && result instanceof Array) {
+          var ulWrapper = self._wrapper.querySelector('ul.' + _c.call(self, 'choices'));
 
-        if (result.length > 0) {
-          for (var i = 0; i < result.length; i++) {
-            var resultItem = result[i];
+          if (result.length > 0) {
+            for (var i = 0; i < result.length; i++) {
+              var resultItem = result[i];
 
+              var li = document.createElement('li');
+
+              //get and parse choice template
+              var suggestionTemplate = _format(activator.templates.suggestion, resultItem);
+
+              var tempDom = document.createElement('div');
+              tempDom.innerHTML = suggestionTemplate;
+              var anchor = tempDom.firstChild;
+
+              (function (resultItem) {
+                anchor.onclick = function () {
+                  //clear the hint first
+                  _clearHint.call(self);
+
+                  _setChoice.call(self, resultItem);
+                };
+              }(resultItem));
+
+              li.appendChild(anchor);
+
+              ulWrapper.appendChild(li);
+            }
+
+          } else {
             var li = document.createElement('li');
-
-            //get and parse choice template
-            var suggestionTemplate = _format(activator.templates.suggestion, resultItem);
-
-            var tempDom = document.createElement('div');
-            tempDom.innerHTML = suggestionTemplate;
-            var anchor = tempDom.firstChild;
-
-            (function (resultItem) {
-              anchor.onclick = function () {
-                //clear the hint first
-                _clearHint.call(self);
-
-                _setChoice.call(self, resultItem);
-              };
-            }(resultItem));
-
-            li.appendChild(anchor);
+            var span = document.createElement('span');
+            span.className = _c.call(self, 'empty');
+            span.textContent = 'No result';
+            li.appendChild(span);
 
             ulWrapper.appendChild(li);
           }
-
         } else {
-          var li = document.createElement('li');
-          var span = document.createElement('span');
-          span.className = _c.call(self, 'empty');
-          span.textContent = 'No result';
-          li.appendChild(span);
-
-          ulWrapper.appendChild(li);
+          _error.call(self, 'Source returned bad data type.');
         }
-      } else {
-        _error.call(self, 'Source returned bad data type.');
+
       }
 
       //remove loading class
@@ -975,6 +978,8 @@
 
     editableDiv.onkeypress = function (e) {
       _handleHintArea.call(self, e);
+
+      //we can't do this in onkeyup because it will occur for all keys, eg. Arrow keys.
       _handleActivatorKey.call(self, e);
     };
 
@@ -995,14 +1000,16 @@
           //now we should select an item
           var currentAnchor = self._wrapper.querySelector('li.' + _c.call(self, 'active') + ' a');
 
-          var itemObject = _getItem.call(self, currentAnchor.getAttribute('data-value'), self._currentActivator);
+          if (currentAnchor != null) {
+            var itemObject = _getItem.call(self, currentAnchor.getAttribute('data-value'), self._currentActivator);
 
-          //clear the hint first
-          _clearHint.call(self);
-          _setChoice.call(self, itemObject);
+            //clear the hint first
+            _clearHint.call(self);
+            _setChoice.call(self, itemObject);
 
-          e.preventDefault();
-          return false;
+            e.preventDefault();
+            return false;
+          }
         }
 
         //we don't have enter in `input` type elements
