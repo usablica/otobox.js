@@ -30,6 +30,7 @@
       /* Default templates */
       templates: {
         suggestion: '<a href="javascript:void(0);" data-value="{{otobox_value}}">{{display}}</a>',
+        noResult: '<span class="otobox-empty">No result</span>',
         choice: '<a data-value="{{otobox_value}}" data-key="{{otobox_key}}" data-activator="{{otobox_activator}}" data-choice="" class="otobox-choiceItem">{{otobox_key}}{{display}}</a>'
       }
     };
@@ -345,7 +346,7 @@
 
     //convert string to dom
     var tempDom = document.createElement('div');
-    tempDom.innerHTML = choiceElementTemplate;
+    tempDom.innerHTML = _addValidAttr(choiceElementTemplate);
     var choiceElement = tempDom.firstChild;
 
     //we use this attribute to:
@@ -451,14 +452,9 @@
 
               ulWrapper.appendChild(li);
             }
-
           } else {
             var li = document.createElement('li');
-            var span = document.createElement('span');
-            span.className = _c.call(self, 'empty');
-            span.textContent = 'No result';
-            li.appendChild(span);
-
+            li.innerHTML = _addValidAttr(activator.templates.noResult);
             ulWrapper.appendChild(li);
           }
         } else {
@@ -490,13 +486,16 @@
   /**
    * Change otobox mode
    */
-  function _changeMode (mode) {
+  function _changeMode (mode, abandonText) {
     if (mode == this._modes.normal) {
       this._stack = '';
       this._stackActivator = '';
       this._currentMode = this._modes.normal;
 
-      if (this._currentActivator != null) {
+      //close choices list
+      _toggleChoiceListState.call(this, false);
+
+      if (this._currentActivator != null && !abandonText) {
         if (!this._currentActivator.customChoice) {
           //remove the hint box and convert it to text
           _convertHintToText.call(this);
@@ -662,7 +661,7 @@
    * Place hint element at the current range
    */
   function _placeHintElement (text, activator) {
-    var hintElement = document.createElement('span');
+    var hintElement = _addValidAttr(document.createElement('span'));
     hintElement.className = _c.call(this, 'hint');
 
     hintElement.setAttribute('data-activator', activator.name);
@@ -701,10 +700,39 @@
         var hintElement = _placeHintElement.call(this, this._stackActivator + this._stack, activatorParts.activator);
 
         //and them eliminate the text
-        var prevElement = hintElement.previousSibling;
+        if (hintElement.previousSibling.nodeType == 3) {
+          var prevText = hintElement.previousSibling.textContent;
 
-        if (prevElement.nodeType == 3) {
-          prevElement.textContent = prevElement.textContent.replace(this._stackActivator + this._stack, '');
+          for (var i = prevText.length; i >= 0; i--) {
+            var currentValue = prevText[i];
+
+            //whitespace is a breaking word
+            if (/\s/.test(currentValue)) {
+              break;
+            }
+
+            prevText = prevText.substr(0, i);
+          }
+
+          hintElement.previousSibling.textContent = prevText;
+        }
+
+        if (hintElement.nextSibling.nodeType == 3) {
+          var nextText = hintElement.nextSibling.textContent;
+          var textLen = nextText.length;
+
+          for (var i = 1; i <= textLen; i++) {
+            var currentValue = nextText[0];
+
+            //whitespace is a breaking word
+            if (/\s/.test(currentValue)) {
+              break;
+            }
+
+            nextText = nextText.substr(1, textLen);
+          }
+
+          hintElement.nextSibling.textContent = nextText;
         }
       }
     }
@@ -716,7 +744,14 @@
   function _handleActivatorKey (e) {
     var targetObject = this._targetObject;
     var activatorObject = _isActivatorKey.call(this, String.fromCharCode(e.which), targetObject);
-    var focusNode = document.getSelection().focusNode;
+    var selection = document.getSelection();
+    var focusNode = selection.focusNode;
+
+    if (selection.type == 'Range') {
+      _convertHintToText.call(this);
+      _changeMode.call(this, this._modes.normal, true);
+      return;
+    }
 
     //there should be an space before the choice element
     if (this._currentMode == this._modes.normal && activatorObject != null && /\s/.test(focusNode.textContent[document.getSelection().focusOffset - 1])) {
@@ -969,6 +1004,20 @@
   };
 
   /**
+   * To remove other html tags
+   */
+  function _stripHtmlTags () {
+    var elements = this._wrapper.querySelectorAll('.' + _c.call(this, 'editableDiv') + ' > *:not([data-otobox])');
+
+    for (var i = 0; i < elements.length; i++) {
+      var element = elements[i];
+
+      element.parentNode.insertBefore(document.createTextNode(element.textContent), element);
+      element.parentNode.removeChild(element);
+    }
+  };
+
+  /**
    * Add binding keys
    */
   function _addBindingKeys (targetObject) {
@@ -1027,6 +1076,9 @@
       //check if the user is changing the choice element
       _handleChoiceChange.call(self, e);
 
+      //remove html tags
+      _stripHtmlTags.call(self);
+
       //set value to target element
       _setTargetObjectValue.call(self, self._options.useText ? editableDiv.textContent : editableDiv.innerHTML);
 
@@ -1046,19 +1098,16 @@
       if (e.keyCode == 37 || e.keyCode == 39) {
         //left or right
         _changeMode.call(self, self._modes.normal);
-        _toggleChoiceListState.call(self, false);
       }
 
       if (e.keyCode == 32) {
         //whitespace
         _changeMode.call(self, self._modes.normal);
-        _toggleChoiceListState.call(self, false);
       }
 
       if (e.keyCode == 27) {
         //escape
         _changeMode.call(self, self._modes.normal);
-        _toggleChoiceListState.call(self, false);
 
         //stop bubbling event
         e.stopPropagation();
@@ -1087,7 +1136,7 @@
     for (var attrname in obj1) { obj3[attrname] = obj1[attrname]; }
     for (var attrname in obj2) { obj3[attrname] = obj2[attrname]; }
     return obj3;
-  }
+  };
 
   /**
    * Format string
@@ -1098,6 +1147,20 @@
     return str.replace(/{{(\w+)}}/g, function (match, item) {
       return typeof obj[item] != 'undefined' ? obj[item] : match;
     });
+  };
+
+  /**
+   * Add otobox valid attribute
+   *
+   */
+  function _addValidAttr (str) {
+    var wrapper = document.createElement('div');
+    wrapper.innerHTML= typeof (str) == 'object' ? str.outerHTML : str;
+
+    var element = wrapper.firstChild;
+    element.setAttribute('data-otobox', 'true');
+
+    return typeof (str) == 'object' ? element : element.outerHTML;
   };
 
   /**
