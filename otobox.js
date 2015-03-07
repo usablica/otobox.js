@@ -188,7 +188,19 @@
         activatorObject.valueKey   = activatorObject.valueKey || this._options.valueKey;
 
         //set templates
-        if (typeof (activatorObject.templates) != 'object') {
+        if (typeof (activatorObject.templates) == 'object') {
+          if (typeof (activatorObject.templates.suggestion) == 'undefined') {
+            activatorObject.templates.suggestion = this._options.templates.suggestion;
+          }
+
+          if (typeof (activatorObject.templates.noResult) == 'undefined') {
+            activatorObject.templates.noResult = this._options.templates.noResult;
+          }
+
+          if (typeof (activatorObject.templates.choice) == 'undefined') {
+            activatorObject.templates.choice = this._options.templates.choice;
+          }
+        } else {
           activatorObject.templates = this._options.templates;
         }
 
