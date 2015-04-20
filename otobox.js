@@ -995,6 +995,15 @@
   };
 
   /**
+   * Manually set the content of editableDiv
+   */
+  function _setContentManually (content) {
+    var editableDiv = this._wrapper.querySelector('.' + _c.call(this, 'editableDiv'));
+
+    editableDiv.innerHTML = content;
+  };
+
+  /**
    * Get all available choices
    */
   function _getChoices () {
@@ -1285,6 +1294,10 @@
     },
     bind: function (name, fn) {
       _bind.call(this, name, fn);
+      return this;
+    },
+    setContent: function (content) {
+      _setContentManually.call(this, content);
       return this;
     },
     trigger: function (name, args) {
